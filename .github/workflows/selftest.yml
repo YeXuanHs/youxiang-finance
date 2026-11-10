@@ -28,9 +28,14 @@ jobs:
         run: |
           fail=0
           while IFS= read -r -d '' f; do
-            out=$(php -l "$f" 2>&1) || { echo "$out"; fail=1; }
+            if ! out=$(php -l "$f" 2>&1); then
+              echo "$out"
+              fail=1
+            fi
           done < <(find . -path ./.git -prune -o -name '*.php' -print0)
-          [ "$fail" -eq 0 ] && echo "全部 PHP 文件语法检查通过"
+          if [ "$fail" -eq 0 ]; then
+            echo "全部 PHP 文件语法检查通过"
+          fi
           exit $fail
 
   selftest:
@@ -46,11 +51,21 @@ jobs:
           extensions: mbstring, openssl, curl, gd, fileinfo, pdo_sqlite
           coverage: none
 
-      - name: 确认 CLI 扩展可用
-        run: php -r "foreach (['pdo_sqlite','mbstring','openssl','curl','gd','fileinfo'] as \$e) { printf(\"%-12s %s\n\", \$e, extension_loaded(\$e) ? 'OK' : 'MISSING'); }"
+      - name: 确认扩展可用
+        run: |
+          php -m > ext.txt
+          for e in pdo_sqlite mbstring openssl curl gd fileinfo; do
+            if grep -qix "$e" ext.txt; then
+              echo "$e  OK"
+            else
+              echo "$e  MISSING"
+              exit 1
+            fi
+          done
 
       - name: 运行 tools/selftest.php
-        run: php tools/selftest.php
+        run: |
+          php tools/selftest.php
 
       - name: 清理自检临时库
         if: always()
