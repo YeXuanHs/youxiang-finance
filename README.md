@@ -164,7 +164,7 @@ php -r "echo implode('-', str_split(strtoupper(substr(hash_hmac('sha256','packag
 
 ## 安全说明
 
-发现安全问题请**私下披露**，不要直接开公开 issue：请通过仓库 Issues 的私下联系渠道提交，我们会在确认后公开修复说明。
+发现安全问题欢迎**直接开公开 Issue** 反馈，也可以提交 Pull Request 一起修复；修复确认后会在 Release 说明里致谢。
 
 部署到公网前请确认：
 
@@ -178,7 +178,7 @@ php -r "echo implode('-', str_split(strtoupper(substr(hash_hmac('sha256','packag
 本项目采用 [MIT](LICENSE) 协议开源。
 
 ```
-Copyright (c) 2026 优享财务系统 Contributors
+Copyright (c) 2026 AnchorFlow团队-Sora
 ```
 
 ## 贡献
