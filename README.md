@@ -164,7 +164,7 @@ php -r "echo implode('-', str_split(strtoupper(substr(hash_hmac('sha256','packag
 
 ## 安全说明
 
-发现安全问题请**私下披露**，不要直接开公开 issue：可通过仓库 Issues 私下联系，或邮件至 `admin@idcpremiumfinance.cn`。
+发现安全问题请**私下披露**，不要直接开公开 issue：请通过仓库 Issues 的私下联系渠道提交，我们会在确认后公开修复说明。
 
 部署到公网前请确认：
 
@@ -178,9 +178,13 @@ php -r "echo implode('-', str_split(strtoupper(substr(hash_hmac('sha256','packag
 本项目采用 [MIT](LICENSE) 协议开源。
 
 ```
-Copyright (c) 2026 喜泓网络科技
+Copyright (c) 2026 优享财务系统 Contributors
 ```
 
-## 商业版
+## 贡献
 
-需要私有部署、定制开发、上游对接代接入、长期技术支持等商业服务，请联系 `admin@idcpremiumfinance.cn`。
+欢迎提交 Issue 与 Pull Request。改动前请先跑一遍自检，避免破坏数据一致性：
+
+```bash
+php tools/selftest.php
+```
