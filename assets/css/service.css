@@ -1,0 +1,158 @@
+/* ==========================================================================
+   优享财务系统 · 服务中心（前台）样式
+   仅作用于 .yx-svc 容器，沿用站点靛蓝品牌色与商店卡片语言。
+   ========================================================================== */
+
+.yx-svc{
+  --sv-ink:#3c465a;
+  --sv-text:#697487;
+  --sv-text-2:#8a93a3;
+  --sv-line:#eef0f3;
+  --sv-line-2:#e5e8ed;
+  --sv-bg-soft:#f5f7fb;
+  --sv-brand:#3b5bfd;
+  --sv-coral:#f76263;
+  color:var(--sv-text);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",Arial,sans-serif;
+}
+
+.yx-svc-wrap{max-width:1240px;margin:0 auto;padding:0 clamp(16px,4vw,40px) 72px}
+
+/* ---------- 英雄区 ---------- */
+.yx-svc-hero{
+  margin:0 calc(-1 * clamp(16px,4vw,40px));
+  padding:56px clamp(16px,4vw,40px) 40px;
+  background:
+    radial-gradient(760px 260px at 50% -30%,rgba(59,91,253,.10),transparent 70%),
+    linear-gradient(180deg,#f7f9ff 0%,#fff 100%);
+  text-align:center;
+}
+.yx-svc-hero h1{margin:0;color:var(--sv-brand);font-size:34px;font-weight:600;letter-spacing:-.02em}
+.yx-svc-hero p{margin:14px 0 0;color:var(--sv-text-2);font-size:15px;line-height:24px}
+
+.yx-svc-search{
+  display:flex;align-items:center;gap:8px;max-width:560px;margin:26px auto 0;
+  height:52px;padding:0 6px 0 18px;background:#fff;border:1px solid var(--sv-line-2);
+  border-radius:999px;box-shadow:0 8px 24px rgba(60,70,90,.06);
+}
+.yx-svc-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;font-size:14px;color:var(--sv-ink)}
+.yx-svc-search input::placeholder{color:#a8b0be}
+.yx-svc-search button{
+  flex:none;height:40px;padding:0 22px;border:0;border-radius:999px;cursor:pointer;
+  background:var(--sv-brand);color:#fff;font-size:14px;font-weight:500;
+}
+.yx-svc-search button:hover{filter:brightness(1.06)}
+
+/* ---------- 分组筛选 ---------- */
+.yx-svc-filters{display:flex;flex-wrap:wrap;gap:10px;margin:26px 0 22px}
+.yx-svc-tag{
+  display:inline-flex;align-items:center;gap:6px;padding:8px 16px;
+  border:1px solid var(--sv-line-2);border-radius:999px;background:#fff;
+  color:var(--sv-text);font-size:13.5px;text-decoration:none;transition:.18s;
+}
+.yx-svc-tag em{font-style:normal;color:#a8b0be;font-size:12px}
+.yx-svc-tag.is-active,.yx-svc-tag:hover{border-color:var(--sv-brand);color:var(--sv-brand);background:#f4f6ff}
+.yx-svc-tag.is-active em{color:var(--sv-brand)}
+
+/* ---------- 卡片网格 ---------- */
+.yx-svc-grid{
+  list-style:none;margin:0;padding:0;display:grid;gap:20px;
+  grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+}
+.yx-svc-card{
+  background:#fff;border:1px solid var(--sv-line);border-radius:14px;
+  transition:transform .18s,box-shadow .18s,border-color .18s;
+}
+.yx-svc-card:hover{transform:translateY(-3px);border-color:#d9dff0;box-shadow:0 14px 32px rgba(60,70,90,.09)}
+.yx-svc-card-link{display:flex;flex-direction:column;height:100%;padding:22px;text-decoration:none;color:inherit}
+
+.yx-svc-card-top{display:flex;gap:14px;align-items:flex-start}
+.yx-svc-ico{
+  flex:none;display:inline-flex;align-items:center;justify-content:center;
+  width:44px;height:44px;border-radius:12px;background:var(--sv-bg-soft);
+  font-size:20px;line-height:1;
+}
+.yx-svc-ico.is-lg{width:58px;height:58px;font-size:26px;border-radius:16px}
+.yx-svc-card-head{min-width:0}
+.yx-svc-card-head h3{margin:0;font-size:16.5px;font-weight:600;color:var(--sv-ink);line-height:1.4}
+.yx-svc-card-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:7px}
+.yx-svc-group{font-size:12.5px;color:var(--sv-text-2)}
+.yx-svc-badge{
+  display:inline-block;margin-left:6px;padding:1px 8px;border-radius:6px;
+  background:#fff1f0;color:var(--sv-coral);font-size:11.5px;font-weight:500;vertical-align:middle;
+}
+.yx-svc-sub{margin:14px 0 0;font-size:13.5px;line-height:22px;color:var(--sv-text-2)}
+
+.yx-svc-feats{list-style:none;margin:14px 0 0;padding:0}
+.yx-svc-feats li{position:relative;padding-left:18px;font-size:13px;line-height:24px;color:var(--sv-text)}
+.yx-svc-feats li::before{
+  content:"";position:absolute;left:2px;top:9px;width:6px;height:6px;
+  border-radius:50%;background:#c7d0e8;
+}
+.yx-svc-feats.is-lg li{line-height:30px;font-size:14px;color:var(--sv-ink)}
+.yx-svc-feats.is-lg li::before{top:12px;background:var(--sv-brand);opacity:.55}
+
+.yx-svc-card-foot{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-top:auto;padding-top:18px;border-top:1px solid var(--sv-line);
+}
+.yx-svc-card-foot{margin-top:18px}
+.yx-svc-price strong{font-size:19px;color:var(--sv-coral);font-weight:600}
+.yx-svc-price small{display:block;margin-top:2px;font-size:12px;color:#a8b0be}
+.yx-svc-buy{
+  flex:none;padding:7px 16px;border-radius:8px;background:#f4f6ff;
+  color:var(--sv-brand);font-size:13px;font-weight:500;
+}
+.yx-svc-card:hover .yx-svc-buy{background:var(--sv-brand);color:#fff}
+
+.yx-svc-empty{padding:70px 0;text-align:center;color:#a8b0be;font-size:14px}
+
+/* ---------- 详情页 ---------- */
+.yx-svc-crumb{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:22px 0 8px;font-size:13px;color:var(--sv-text-2)}
+.yx-svc-crumb a{color:var(--sv-text-2);text-decoration:none}
+.yx-svc-crumb a:hover{color:var(--sv-brand)}
+.yx-svc-crumb b{color:var(--sv-ink);font-weight:500}
+
+.yx-svc-detail{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:28px;align-items:start;margin-top:14px}
+.yx-svc-detail-main{background:#fff;border:1px solid var(--sv-line);border-radius:14px;padding:28px}
+.yx-svc-detail-head{display:flex;gap:18px;align-items:flex-start}
+.yx-svc-detail-head h1{margin:0;font-size:24px;font-weight:600;color:var(--sv-ink);line-height:1.35}
+.yx-svc-detail-meta{display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;font-size:13px;color:var(--sv-text-2)}
+.yx-svc-detail-meta span{position:relative}
+.yx-svc-detail-meta span+span::before{content:"";position:absolute;left:-9px;top:50%;width:3px;height:3px;margin-top:-1.5px;border-radius:50%;background:#d4d9e3}
+
+.yx-svc-block{margin-top:28px;padding-top:24px;border-top:1px solid var(--sv-line)}
+.yx-svc-block h2{margin:0 0 14px;font-size:16px;font-weight:600;color:var(--sv-ink)}
+.yx-svc-desc{margin:0;font-size:14px;line-height:26px;color:var(--sv-text)}
+
+.yx-svc-detail-side{position:sticky;top:20px}
+.yx-svc-buybox{background:#fff;border:1px solid var(--sv-line);border-radius:14px;padding:24px;box-shadow:0 10px 28px rgba(60,70,90,.06)}
+.yx-svc-buybox-price{padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--sv-line)}
+.yx-svc-buybox-price strong{display:block;font-size:26px;font-weight:600;color:var(--sv-coral);line-height:1.2}
+.yx-svc-buybox-price small{display:block;margin-top:6px;font-size:12.5px;color:#a8b0be}
+
+.yx-svc-field{display:block;margin-bottom:16px;font-size:13px;color:var(--sv-text-2)}
+.yx-svc-field select,.yx-svc-field input,.yx-svc-field textarea{
+  display:block;width:100%;margin-top:7px;padding:10px 12px;box-sizing:border-box;
+  border:1px solid var(--sv-line-2);border-radius:9px;background:#fff;
+  font-size:14px;color:var(--sv-ink);font-family:inherit;outline:0;
+}
+.yx-svc-field select:focus,.yx-svc-field input:focus,.yx-svc-field textarea:focus{border-color:var(--sv-brand)}
+.yx-svc-field textarea{resize:vertical}
+
+.yx-svc-submit{
+  display:block;width:100%;padding:13px 0;border:0;border-radius:10px;cursor:pointer;
+  background:var(--sv-coral);color:#fff;font-size:15px;font-weight:500;text-align:center;text-decoration:none;
+  font-family:inherit;
+}
+.yx-svc-submit:hover{background:#ec5658}
+.yx-svc-submit.is-link{box-sizing:border-box}
+.yx-svc-tip{margin:12px 0 0;text-align:center;font-size:12.5px;color:#a8b0be}
+.yx-svc-tip a{color:var(--sv-brand);text-decoration:none}
+
+@media (max-width:900px){
+  .yx-svc-detail{grid-template-columns:1fr}
+  .yx-svc-detail-side{position:static}
+  .yx-svc-hero h1{font-size:26px}
+  .yx-svc-hero{padding:40px clamp(16px,4vw,40px) 30px}
+}

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="256" viewBox="0 0 720 256" role="img" aria-label="智简魔方 IDCSmart.com">
+  <title>智简魔方 IDCSmart.com</title>
+  <defs>
+    <clipPath id="zjmfTile"><rect x="24" y="40" width="176" height="176" rx="40"/></clipPath>
+  </defs>
+
+  <!-- 标志：红色圆角方块 + 白色 Z 形折带 -->
+  <rect x="24" y="40" width="176" height="176" rx="40" fill="#e20c12"/>
+  <g clip-path="url(#zjmfTile)" fill="#ffffff">
+    <rect x="56" y="72" width="104" height="26" rx="9"/>
+    <rect x="56" y="158" width="104" height="26" rx="9"/>
+    <rect x="70" y="104" width="76" height="22" rx="8"/>
+    <rect x="104" y="104" width="70" height="72" rx="20"/>
+  </g>
+
+  <!-- 中文名称（方正中黑，横竖等粗） -->
+  <g transform="translate(246 34) scale(2.15)" fill="#0a0a0a" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',sans-serif" font-size="48" font-weight="bold" textLength="48" lengthAdjust="spacingAndGlyphs">
+    <text x="0" y="42">智</text>
+    <text x="52" y="42">简</text>
+    <text x="104" y="42">魔</text>
+    <text x="156" y="42">方</text>
+  </g>
+
+  <!-- 英文域名（黑体斜体） -->
+  <text x="248" y="196" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif"
+        font-size="58" font-weight="900" font-style="italic" letter-spacing="-0.5" fill="#0a0a0a">IDCSmart.com</text>
+</svg>

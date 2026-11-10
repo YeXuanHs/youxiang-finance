@@ -1,0 +1,68 @@
+/* 优享财务系统 · 小优助手浮窗（轻触小兔咨询 / 再触收回弹窗） */
+.yx-chat{position:fixed;right:20px;bottom:20px;z-index:6000;font-size:14px}
+.yx-chat-fab{display:inline-flex;align-items:center;gap:8px;padding:10px 16px 10px 12px;border:0;border-radius:999px;
+  background:linear-gradient(135deg,#4dabf7,#3b5bdb);color:#fff;cursor:pointer;box-shadow:0 10px 24px rgba(30,60,120,.28);
+  font-size:14px;line-height:1;transition:transform .15s ease,box-shadow .15s ease}
+.yx-chat-fab:hover{transform:translateY(-2px);box-shadow:0 14px 28px rgba(30,60,120,.34)}
+.yx-chat-fab-ico{width:30px;height:30px;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:18px;line-height:1}
+.yx-chat-fab-tx{font-weight:600;letter-spacing:.5px}
+.yx-chat-fab.is-open .yx-chat-fab-ico{animation:yx-rabbit .6s ease}
+@keyframes yx-rabbit{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+.yx-chat-panel{position:absolute;right:0;bottom:64px;width:300px;max-width:calc(100vw - 32px);
+  height:400px;max-height:calc(100vh - 140px);display:flex;flex-direction:column;overflow:hidden;
+  background:#fff;border-radius:14px;box-shadow:0 18px 48px rgba(20,40,80,.24);border:1px solid #e6ebf4}
+.yx-chat-panel[hidden],.yx-chat-body[hidden],.yx-chat-quick[hidden],.yx-chat-foot[hidden],.yx-chat-leave[hidden]{display:none!important}
+.yx-chat-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;
+  background:linear-gradient(135deg,#4dabf7,#3b5bdb);color:#fff}
+.yx-chat-title strong{display:block;font-size:15px}
+.yx-chat-status{font-size:12px;opacity:.9}
+.yx-chat-head-btns{display:flex;gap:6px;align-items:center}
+.yx-chat-mini{border:1px solid rgba(255,255,255,.6);background:transparent;color:#fff;border-radius:6px;
+  padding:3px 8px;font-size:12px;cursor:pointer}
+.yx-chat-mini:hover{background:rgba(255,255,255,.18)}
+
+.yx-chat-quick{display:flex;gap:8px;padding:10px 12px;background:#fff;border-bottom:1px solid #eef1f6}
+.yx-chat-quick button{flex:1;padding:8px 6px;border:1px solid #d8e6fb;border-radius:8px;background:#f4f9ff;
+  color:#2b5ea8;font-size:13px;cursor:pointer;transition:background .15s,border-color .15s}
+.yx-chat-quick button:hover{background:#e8f2fd;border-color:#b9d7fb}
+.yx-chat-quick button:disabled{opacity:.5;cursor:not-allowed}
+
+.yx-chat-body{flex:1;overflow-y:auto;padding:14px;background:#f6f8fc;display:flex;flex-direction:column;gap:10px}
+.yx-msg{display:flex}
+.yx-msg-me{justify-content:flex-end}
+.yx-msg .yx-bubble{max-width:82%;padding:9px 12px;border-radius:12px;line-height:1.5;word-break:break-word;white-space:normal}
+.yx-msg-ai .yx-bubble{background:#fff;border:1px solid #e6ebf4;color:#1f2733}
+.yx-msg-agent .yx-bubble{background:#e8f2fd;border:1px solid #cfe3fb;color:#123c63}
+.yx-msg-me .yx-bubble{background:var(--primary,#4dabf7);color:#fff}
+.yx-msg-sys{justify-content:center}
+.yx-msg-sys .yx-bubble{background:#eef1f6;color:#6b7688;font-size:12px;max-width:92%;text-align:center}
+
+.yx-chat-leave{flex:1;display:flex;flex-direction:column;gap:8px;padding:12px;background:#f6f8fc;overflow-y:auto}
+.yx-chat-leave-head{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:#1f2733}
+.yx-chat-leave-head button{border:0;background:transparent;color:#7b8798;font-size:12px;cursor:pointer}
+.yx-chat-leave input,.yx-chat-leave textarea{width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #dbe2ec;
+  border-radius:8px;outline:none;font-size:13px;font-family:inherit;background:#fff;resize:vertical}
+.yx-chat-leave input:focus,.yx-chat-leave textarea:focus{border-color:var(--primary,#4dabf7)}
+.yx-chat-leave .yx-chat-send{width:100%;padding:10px 0}
+.yx-chat-leave-msg{margin:0;min-height:16px;color:#e03131;font-size:12px}
+.yx-chat-leave-tip{margin:0;color:#98a2b3;font-size:11px;line-height:1.5}
+
+.yx-chat-foot{display:flex;gap:8px;padding:10px;border-top:1px solid #eef1f6;background:#fff}
+.yx-chat-foot input{flex:1;min-width:0;padding:9px 12px;border:1px solid #dbe2ec;border-radius:8px;outline:none;font-size:14px}
+.yx-chat-foot input:focus{border-color:var(--primary,#4dabf7)}
+.yx-chat-send{padding:9px 16px;border:0;border-radius:8px;background:var(--primary,#4dabf7);color:#fff;cursor:pointer;font-size:14px}
+.yx-chat-send:disabled,.yx-chat-foot input:disabled{opacity:.5;cursor:not-allowed}
+.yx-chat-tip{padding:6px 12px 10px;background:#fff;color:#98a2b3;font-size:11px;text-align:center}
+
+/* 屏幕较窄或较矮时自动缩小一档 */
+@media (max-width:768px),(max-height:640px){
+  .yx-chat-panel{width:280px;height:360px}
+}
+
+@media (max-width:520px){
+  .yx-chat{right:12px;bottom:12px}
+  .yx-chat-panel{width:calc(100vw - 24px);height:60vh;bottom:60px}
+  .yx-chat-fab{padding:8px 12px 8px 8px}
+  .yx-chat-fab-tx{font-size:13px}
+}

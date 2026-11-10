@@ -1,0 +1,9 @@
+# 命令行工具目录，不应通过浏览器访问。
+# 注意：tools/cron.php 若使用 URL 方式触发，请在站点配置中单独放行该文件，或仅使用 CLI 方式。
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>

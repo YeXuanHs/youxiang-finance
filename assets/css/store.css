@@ -1,0 +1,376 @@
+/* ==========================================================================
+   优享财务系统 · 应用中心（商店）样式
+   版式参考 IDC 应用中心目录页：英雄区 + 搜索、排序条、多行筛选、
+   四列卡片网格、加载更多。配色与设计令牌沿用本系统靛蓝品牌色。
+   仅作用于 .yx-shop 容器，不影响站点其它页面。
+   ========================================================================== */
+
+.yx-shop{
+  --ys-coral:#f76263;
+  --ys-coral-hover:#ec5658;
+  --ys-coral-soft:#fff4f3;
+  --ys-coral-line:#ffaaa7;
+  --ys-ink:#3c465a;
+  --ys-ink-2:#485267;
+  --ys-ink-3:#3f495d;
+  --ys-text:#697487;
+  --ys-text-2:#8a93a3;
+  --ys-text-3:#98a0ad;
+  --ys-line:#eef0f3;
+  --ys-line-2:#e5e8ed;
+  --ys-line-3:#e7e9ed;
+  --ys-bg-soft:#f3f5f8;
+  --ys-star:#ff6868;
+  --ys-star-off:#f2f4f7;
+  --ys-font:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",Arial,sans-serif;
+  color:var(--ys-ink-2);
+  font-family:var(--ys-font);
+}
+
+/* 让商店页可用满宽，避免被门户容器挤窄 */
+.yx-shop-wrap{max-width:1480px;margin:0 auto;padding:0 clamp(16px,4vw,48px) 72px}
+.yx-shop-wrap.is-full{padding-left:clamp(16px,4vw,56px);padding-right:clamp(16px,4vw,56px)}
+
+/* ---------- 1. 英雄区 ---------- */
+.yx-shop-hero{
+  position:relative;
+  isolation:isolate;
+  display:flex;
+  align-items:flex-end;
+  min-height:320px;
+  margin:0 calc(-1 * clamp(16px,4vw,48px)) 0;
+  padding:0 clamp(16px,4vw,48px) 44px;
+  overflow:hidden;
+  background:
+    radial-gradient(900px 320px at 50% -30%,rgba(59,91,253,.10),transparent 70%),
+    linear-gradient(180deg,#f7f9ff 0%,#fff 100%);
+}
+.yx-shop-hero-inner{width:100%;max-width:1120px;margin:0 auto;text-align:center}
+.yx-shop-hero h1{margin:0;color:var(--primary);font-size:38px;font-weight:600;line-height:1.25;letter-spacing:-.02em}
+.yx-shop-hero p{margin:18px 0 0;color:#8d929f;font-size:15px;line-height:24px}
+
+/* 搜索条 */
+.yx-shop-search{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  width:100%;
+  height:60px;
+  margin-top:40px;
+  padding:0 6px 0 20px;
+  border:1px solid rgba(233,237,245,.9);
+  border-radius:6px;
+  background:rgba(255,255,255,.94);
+  box-shadow:0 12px 28px rgba(78,78,92,.06);
+  -webkit-backdrop-filter:blur(4px);
+  backdrop-filter:blur(4px);
+}
+.yx-shop-search svg{width:20px;height:20px;flex:none;color:#435066;fill:none;stroke:currentColor;stroke-width:1.45;stroke-linecap:round;stroke-linejoin:round}
+.yx-shop-search input{
+  width:100%;min-width:0;height:100%;padding:0;border:0;outline:0;
+  color:#3f495d;background:transparent;font:15px/1 var(--ys-font);
+}
+.yx-shop-search input::placeholder{color:#9ca1ac;opacity:1}
+.yx-shop-search button{
+  width:150px;height:48px;flex:none;border:0;border-radius:3px;
+  color:#fff;background:var(--primary);font:600 16px/1 var(--ys-font);cursor:pointer;
+  transition:background .15s ease;
+}
+.yx-shop-search button:hover{background:var(--primary-d)}
+
+/* ---------- 2. 目录主区 ---------- */
+.yx-shop-main{padding-top:18px}
+
+/* 标题行 + 排序 */
+.yx-shop-heading{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;
+  gap:12px 24px;min-height:72px;border-bottom:1px solid var(--ys-line);
+}
+.yx-shop-title{display:flex;align-items:baseline;gap:12px}
+.yx-shop-title h2{margin:0;color:var(--ys-ink-2);font-size:16px;font-weight:600;line-height:22px}
+.yx-shop-title span{color:#a0a7b2;font-size:13px}
+
+.yx-shop-sorts{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px 32px}
+.yx-shop-sort{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  min-height:32px;padding:6px 0;border:0;border-radius:3px;
+  color:#344058;background:transparent;font:13px/20px var(--ys-font);
+  white-space:nowrap;cursor:pointer;
+}
+.yx-shop-sort:hover,.yx-shop-sort.is-active{color:var(--primary)}
+.yx-shop-sort.is-active{font-weight:600}
+.yx-shop-sort-arrows{display:inline-flex;flex-direction:column;gap:2px;flex:none}
+.yx-shop-sort-arrow{width:0;height:0;display:block;border-right:4px solid transparent;border-left:4px solid transparent}
+.yx-shop-sort-arrow.is-asc{border-bottom:5px solid #c3cad5}
+.yx-shop-sort-arrow.is-desc{border-top:5px solid #c3cad5}
+.yx-shop-sort-arrow.is-asc.is-active{border-bottom-color:var(--primary)}
+.yx-shop-sort-arrow.is-desc.is-active{border-top-color:var(--primary)}
+
+/* 多行筛选 */
+.yx-shop-filters{
+  display:flex;align-items:flex-start;flex-wrap:wrap;gap:16px 34px;
+  padding:0 0 19px;
+}
+.yx-shop-filter-row{display:flex;align-items:flex-start;gap:14px;min-width:0}
+.yx-shop-filter-row.is-full{width:100%;padding:15px 0;border-bottom:1px solid var(--ys-line)}
+.yx-shop-filter-label{
+  flex:none;padding-top:8px;color:var(--ys-text-2);
+  font-size:13px;line-height:16px;white-space:nowrap;
+}
+.yx-shop-filter-label::after{content:"："}
+.yx-shop-filter-values{display:flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0;flex:1}
+.yx-shop-tag{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:62px;min-height:32px;padding:6px 16px;border:1px solid var(--ys-line-2);border-radius:4px;
+  color:var(--ys-text);background:#fff;font:13px/18px var(--ys-font);
+  text-align:center;white-space:nowrap;cursor:pointer;
+  transition:color .15s ease,border-color .15s ease,background .15s ease;
+}
+.yx-shop-tag:hover,.yx-shop-tag:focus-visible{color:var(--primary);border-color:#c3cbff;background:#f7f9ff;outline:none}
+.yx-shop-tag.is-active{color:var(--primary);border-color:#9fb0ff;background:var(--primary-soft);font-weight:500}
+.yx-shop-tag em{margin-left:4px;color:inherit;font-style:normal;opacity:.65;font-size:12px}
+
+/* ---------- 3. 卡片网格 ---------- */
+.yx-shop-content{min-height:100px;padding-top:18px}
+.yx-shop-grid{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:18px;margin:0;padding:0;list-style:none;
+}
+.yx-shop-item{min-width:0;margin:0;padding:0;list-style:none}
+
+.yx-card{
+  display:flex;flex-direction:column;height:100%;
+  overflow:hidden;border:1px solid var(--ys-line-3);border-radius:6px;
+  color:inherit;background:#fff;text-decoration:none;
+  transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease;
+}
+.yx-card:hover{border-color:var(--primary-soft);box-shadow:0 8px 22px rgba(54,64,82,.08);transform:translateY(-2px)}
+.yx-card:focus-visible{border-color:var(--primary);outline:2px solid rgba(59,91,253,.24);outline-offset:2px;text-decoration:none}
+
+/* 封面 */
+.yx-card-media{
+  display:flex;align-items:center;justify-content:center;
+  width:calc(100% - 10px);margin:5px 5px 0;
+  aspect-ratio:672 / 380;overflow:hidden;border-radius:6px;background:var(--ys-bg-soft);
+}
+.yx-card-media img{width:100%;height:100%;display:block;object-fit:scale-down}
+.yx-card-media .yx-card-ico{
+  display:flex;align-items:center;justify-content:center;
+  width:64px;height:64px;border-radius:14px;
+  color:#fff;font-size:28px;font-weight:600;line-height:1;
+  background:linear-gradient(135deg,var(--primary),#6b82ff);
+  box-shadow:0 6px 16px rgba(59,91,253,.22);
+}
+.yx-card-media .yx-card-ico.is-3rd{background:linear-gradient(135deg,#7a5af8,#a48bff);box-shadow:0 6px 16px rgba(122,90,248,.22)}
+
+/* 卡片正文 */
+.yx-card-body{display:flex;flex:1;flex-direction:column;min-height:170px;padding:18px 14px 14px}
+.yx-card-title{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;min-height:24px;min-width:0}
+.yx-card-name{
+  flex:1;min-width:0;margin:0;overflow:hidden;
+  color:var(--ys-ink-3);font-size:15px;font-weight:600;line-height:22px;
+  text-overflow:ellipsis;white-space:nowrap;
+}
+
+/* 认证类型徽标 */
+.yx-owner{
+  display:inline-flex;align-items:center;gap:3px;flex:none;min-height:22px;
+  padding:1px 6px 1px 4px;border:1px solid transparent;border-radius:4px;
+  font-size:11px;font-weight:400;line-height:18px;white-space:nowrap;
+}
+.yx-owner i{display:flex;align-items:center;justify-content:center;width:12px;height:14px;font-style:normal;font-size:10px}
+.yx-owner.is-official{border-color:#d8dcff;color:#3b5bfd;background:#f1f3ff}
+.yx-owner.is-company{border-color:#f3dfc3;color:#d57b22;background:#fff8ef}
+.yx-owner.is-person{border-color:#dfe1f8;color:#6469c9;background:#f5f5ff}
+/* 第三方条目：未核验开发者资质，用中性灰，不冒充官方蓝/个人紫 */
+.yx-owner.is-third{border-color:#e1e5ea;color:#69737f;background:#f6f7f9}
+
+/* 评分 + 活跃度 */
+.yx-card-signals{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px}
+.yx-stars{position:relative;display:flex;width:87px;height:18px;flex:none;align-items:center;gap:3px;overflow:hidden;white-space:nowrap}
+.yx-stars-on,.yx-stars-off{position:absolute;top:0;left:0;overflow:hidden;line-height:16px;white-space:nowrap}
+.yx-stars-on{z-index:1}
+.yx-stars i{display:inline-block;width:calc(87px / 5);font-size:18px;line-height:16px;text-align:center;font-style:normal}
+.yx-stars-on i{color:var(--ys-star)}
+.yx-stars-off i{color:var(--ys-star-off)}
+.yx-card-activity{color:var(--ys-text-3);font-size:12px;line-height:18px;white-space:nowrap}
+
+/* 底部：作者 + 价格 */
+.yx-card-footer{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-height:54px;margin-top:auto;padding-top:13px;border-top:1px solid #f0f1f4;
+}
+.yx-card-author{display:flex;align-items:center;gap:7px;min-width:0}
+.yx-card-author-ico{
+  display:flex;align-items:center;justify-content:center;flex:none;
+  width:17px;height:17px;border-radius:50%;
+  color:#fff;font-size:10px;font-style:normal;line-height:1;
+  background:linear-gradient(135deg,#98a7c9,#6d7f9f);
+}
+.yx-card-author-name{
+  min-width:0;margin:0;overflow:hidden;
+  color:#8e96a4;font-size:12px;line-height:18px;
+  text-overflow:ellipsis;white-space:nowrap;
+}
+.yx-card-price{
+  flex:none;margin:0;padding:0;border:0;white-space:nowrap;
+  color:var(--ys-coral);font-size:22px;font-weight:600;line-height:28px;
+}
+.yx-card-price small{margin-right:2px;font-size:12px;font-weight:500}
+.yx-card-price .dec{font-size:14px;font-weight:600}
+.yx-card-price em{margin-left:3px;color:#b8bdc6;font-size:10px;font-style:normal;font-weight:400}
+.yx-card-price.is-free{color:#12b76a;font-size:18px;font-weight:600}
+
+/* 空状态与加载更多 */
+.yx-shop-empty{min-height:260px;display:grid;place-items:center;color:#9ba2ae;font-size:14px}
+.yx-shop-more{min-height:96px;display:grid;place-items:center;color:#9ba2ae;font-size:13px}
+.yx-shop-more a{
+  display:grid;place-items:center;min-width:168px;height:42px;padding:0 24px;
+  border:1px solid #b9c4ff;border-radius:4px;
+  color:var(--primary);background:#fff;font:14px/1 var(--ys-font);cursor:pointer;
+}
+.yx-shop-more a:hover{color:#fff;background:var(--primary);text-decoration:none}
+.yx-shop-more span{padding:0 20px;text-align:center}
+
+/* ---------- 4. 详情页 ---------- */
+.yx-detail-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:22px;align-items:start}
+.yx-crumb{padding:22px 0 12px;color:#98a0ad;font-size:13px}
+.yx-crumb a{color:#8a93a3}
+.yx-crumb a:hover{color:var(--primary)}
+
+.yx-panel{border:1px solid var(--ys-line-3);border-radius:6px;background:#fff;padding:22px}
+.yx-panel + .yx-panel{margin-top:18px}
+.yx-panel h2{margin:0 0 14px;color:var(--ys-ink-2);font-size:16px;font-weight:600}
+
+.yx-detail-hero{display:flex;flex-direction:column}
+.yx-detail-media{
+  display:flex;align-items:center;justify-content:center;
+  width:100%;aspect-ratio:672 / 300;overflow:hidden;border-radius:6px;background:var(--ys-bg-soft);
+}
+.yx-detail-media .yx-card-ico{width:88px;height:88px;border-radius:18px;font-size:38px}
+.yx-detail-media img{width:100%;height:100%;object-fit:scale-down}
+.yx-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-top:18px}
+.yx-detail-head h1{margin:0;color:var(--ys-ink-3);font-size:22px;font-weight:600;line-height:1.35}
+.yx-detail-meta{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;color:#8e96a4;font-size:13px}
+.yx-detail-desc{margin:18px 0 0;color:#4b4b6b;font-size:14px;line-height:1.9;white-space:pre-wrap}
+
+/* 属性表 */
+.yx-kv{width:100%;border-collapse:collapse;margin-top:18px;font-size:13.5px}
+.yx-kv th,.yx-kv td{padding:10px 0;border-bottom:1px solid #f2f4f8;text-align:left;vertical-align:top}
+.yx-kv th{width:120px;color:#8a93a3;font-weight:400}
+.yx-kv td{color:#3f495d}
+.yx-kv tr:last-child th,.yx-kv tr:last-child td{border-bottom:0}
+.yx-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;word-break:break-all}
+
+/* 价格卡 */
+.yx-buy-price{display:flex;align-items:baseline;gap:8px;color:var(--ys-coral);font-size:34px;font-weight:600;line-height:1.1}
+.yx-buy-price small{font-size:15px;font-weight:500}
+.yx-buy-price em{color:#b8bdc6;font-size:12px;font-style:normal;font-weight:400}
+.yx-buy-price.is-free{color:#12b76a;font-size:26px}
+.yx-buy-sub{margin:8px 0 0;color:#98a0ad;font-size:12.5px}
+.yx-buy-form{margin-top:18px}
+.yx-buy-form label{display:block;margin-bottom:12px;color:#697487;font-size:13px}
+.yx-buy-form input[type=text]{
+  display:block;width:100%;height:42px;margin-top:6px;padding:0 12px;
+  border:1px solid var(--ys-line-2);border-radius:4px;color:#3f495d;background:#fff;font:14px/1 var(--ys-font);
+}
+.yx-buy-form input[type=text]:focus{border-color:#9fb0ff;outline:2px solid rgba(59,91,253,.14)}
+.yx-buy-btn{
+  display:block;width:100%;height:46px;border:0;border-radius:4px;
+  color:#fff;background:var(--primary);font:600 16px/1 var(--ys-font);cursor:pointer;
+  transition:background .15s ease;
+}
+.yx-buy-btn:hover{background:var(--primary-d)}
+.yx-buy-btn.is-ghost{background:#fff;border:1px solid #b9c4ff;color:var(--primary)}
+.yx-buy-btn.is-ghost:hover{background:#f5f7ff}
+.yx-buy-tip{margin:12px 0 0;color:#98a0ad;font-size:12.5px;line-height:1.7}
+.yx-buy-note{margin:14px 0 0;padding:10px 12px;border-radius:4px;font-size:12.5px;line-height:1.7}
+.yx-buy-note.is-ok{color:#1f7a35;background:#e9f9ee}
+.yx-buy-note.is-warn{color:#996c15;background:#fdf5e6}
+.yx-buy-note.is-info{color:#16639f;background:#eaf3fd}
+
+/* 付款方式标签 */
+.yx-paytags{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px;padding-top:14px;border-top:1px dashed var(--ys-line-2)}
+.yx-paytags b{color:#8a93a3;font-size:12px;font-weight:400}
+.yx-paytag{padding:3px 9px;border:1px solid var(--ys-line-2);border-radius:3px;color:#697487;background:#fbfcfe;font-size:12px;line-height:18px}
+.yx-paytag.is-hot{border-color:#ffd8d5;color:#f06460;background:var(--ys-coral-soft)}
+
+/* ---------- 5. 开发者卡片 + 版本报价 ---------- */
+.yx-dev-card .yx-dev-head{display:flex;align-items:flex-start;gap:14px}
+.yx-dev-avatar{
+  display:flex;align-items:center;justify-content:center;flex:none;
+  width:48px;height:48px;border-radius:10px;
+  color:#fff;font-size:20px;font-weight:600;line-height:1;
+  background:linear-gradient(135deg,var(--primary),#6b82ff);
+  box-shadow:0 6px 16px rgba(59,91,253,.2);
+}
+.yx-dev-id{min-width:0;flex:1}
+.yx-dev-name{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:15px;font-weight:600;color:var(--ys-ink-3);line-height:22px}
+.yx-dev-name a{color:inherit}
+.yx-dev-name a:hover{color:var(--primary)}
+.yx-dev-intro{margin:8px 0 0;color:var(--ys-text);font-size:13px;line-height:1.8}
+.yx-dev-stats{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px;color:#98a0ad;font-size:12.5px}
+.yx-dev-stats b{color:#3f495d;font-weight:600}
+.yx-dev-contact{margin-top:14px}
+.yx-dev-contact th{width:96px}
+.yx-dev-contact a{color:var(--primary)}
+.yx-muted{color:#a8b0bc}
+
+/* 版本报价切换 */
+.yx-buy-editions{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-top:16px}
+.yx-buy-edition{
+  position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+  padding:10px 12px;border:1px solid var(--ys-line-2);border-radius:5px;
+  background:#fff;color:var(--ys-ink-2);font-family:var(--ys-font);text-align:left;cursor:pointer;
+  transition:border-color .15s ease,background .15s ease,box-shadow .15s ease;
+}
+.yx-buy-edition:hover{border-color:#9fb0ff;background:#f7f9ff}
+.yx-buy-edition.is-active{border-color:var(--primary);background:var(--primary-soft);box-shadow:0 0 0 2px rgba(59,91,253,.12)}
+.yx-buy-edition-name{font-size:13px;font-weight:600;line-height:18px}
+.yx-buy-edition-price{color:var(--ys-coral);font-size:14px;font-weight:600;line-height:18px}
+.yx-buy-edition-price i{margin-left:2px;color:#b8bdc6;font-size:11px;font-style:normal;font-weight:400}
+.yx-buy-edition-tag{
+  position:absolute;top:-1px;right:-1px;
+  padding:0 6px;border-radius:0 5px 0 5px;
+  color:#fff;background:var(--primary);font-size:10px;line-height:16px;white-space:nowrap;
+}
+
+/* ---------- 6. 响应式 ---------- */
+@media (max-width:1200px){
+  .yx-shop-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .yx-detail-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:920px){
+  .yx-shop-hero{min-height:260px;padding-bottom:32px}
+  .yx-shop-hero h1{font-size:30px}
+  .yx-shop-hero p{max-width:560px;margin:14px auto 0;font-size:13.5px}
+  .yx-shop-search{height:56px;gap:12px;margin-top:28px;padding-left:16px}
+  .yx-shop-search button{width:120px;height:44px;font-size:15px}
+  .yx-shop-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:620px){
+  .yx-shop{--ys-radius-m:4px}
+  .yx-shop-hero{min-height:0;padding:44px 0 26px}
+  .yx-shop-hero h1{font-size:24px;max-width:9em;margin:0 auto;line-height:1.38}
+  .yx-shop-hero p{max-width:22em;line-height:1.8}
+  .yx-shop-search{position:relative;height:104px;align-items:flex-start;margin-top:24px;padding:0 12px 52px}
+  .yx-shop-search svg{margin-top:18px;width:20px;height:20px}
+  .yx-shop-search input{height:52px;font-size:14px}
+  .yx-shop-search button{position:absolute;right:7px;bottom:7px;left:7px;width:auto;height:42px}
+  .yx-shop-heading{min-height:60px;padding:12px 0}
+  .yx-shop-title h2{font-size:17px}
+  .yx-shop-sorts{width:100%;justify-content:flex-start;gap:8px 22px}
+  .yx-shop-filters{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+  .yx-shop-filter-row{display:grid;gap:7px}
+  .yx-shop-filter-label{padding-top:0}
+  .yx-shop-filter-label::after{content:""}
+  .yx-shop-tag{min-width:0;padding-inline:13px}
+  .yx-shop-grid{grid-template-columns:minmax(0,1fr)}
+  .yx-card-body{min-height:0}
+  .yx-detail-media{aspect-ratio:16 / 10}
+  .yx-buy-price{font-size:28px}
+}
+@media (prefers-reduced-motion:reduce){
+  .yx-card,.yx-shop-tag,.yx-shop-search button,.yx-buy-btn{transition:none}
+  .yx-card:hover{transform:none}
+}

@@ -1,0 +1,639 @@
+/* ==========================================================================
+   优享财务系统 · 登录 / 注册页（仿 007idc 会员中心注册版式）
+   左：深色品牌区（品牌、主标题、说明、入口按钮、能力清单）
+   右：白色表单区（LOGO、标题、表单、条款、切换链接）
+   依赖 style.css 中的 :root 变量，需在其后引入。
+   ========================================================================== */
+
+body.yx-auth-body {
+  margin: 0;
+  background: #fff;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.yx-auth {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ---------------------------------- 左侧品牌区 ---------------------------------- */
+
+.yx-auth-hero {
+  position: relative;
+  flex: 0 0 56%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px 60px;
+  color: #fff;
+  background:
+    radial-gradient(900px 520px at 78% 8%, rgba(59, 91, 253, .55), transparent 62%),
+    radial-gradient(680px 480px at 8% 92%, rgba(20, 184, 166, .28), transparent 60%),
+    linear-gradient(160deg, #0b1224 0%, #131f3a 55%, #0d1730 100%);
+}
+
+/* 装饰：轨道圆环 + 斜向光斑，避免整块纯色显得空 */
+.yx-auth-hero::before,
+.yx-auth-hero::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.yx-auth-hero::before {
+  width: 620px;
+  height: 620px;
+  right: -220px;
+  top: -200px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .04);
+}
+
+.yx-auth-hero::after {
+  width: 300px;
+  height: 300px;
+  left: -120px;
+  bottom: -130px;
+  background: rgba(59, 91, 253, .22);
+  filter: blur(6px);
+}
+
+.yx-auth-art {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.yx-auth-art i {
+  position: absolute;
+  display: block;
+}
+
+.yx-auth-art .art-line-1 {
+  left: 0;
+  right: 0;
+  top: 62%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .16), transparent);
+}
+
+.yx-auth-art .art-line-2 {
+  left: 0;
+  right: 0;
+  top: 70%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .08), transparent);
+}
+
+.yx-auth-art .art-orb {
+  width: 190px;
+  height: 190px;
+  right: 12%;
+  bottom: 16%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, .28), rgba(59, 91, 253, .06) 62%, transparent 70%);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .35);
+}
+
+.yx-auth-art .art-ring {
+  width: 380px;
+  height: 380px;
+  right: -70px;
+  bottom: 2%;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 255, 255, .14);
+}
+
+.yx-auth-hero-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.yx-auth-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  align-self: flex-start;
+  color: #fff;
+  text-decoration: none;
+}
+
+.yx-auth-brand img {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.yx-auth-brand span {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: .01em;
+}
+
+.yx-auth-hero-body {
+  margin: auto 0;
+  padding: 40px 0;
+  max-width: 560px;
+}
+
+.yx-auth-hero-body h1 {
+  margin: 0 0 20px;
+  font-size: 38px;
+  line-height: 1.32;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  color: #fff;
+}
+
+.yx-auth-hero-body p {
+  margin: 0;
+  max-width: 520px;
+  font-size: 15px;
+  line-height: 1.85;
+  color: rgba(255, 255, 255, .74);
+}
+
+.yx-auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 34px;
+}
+
+.yx-auth-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform .16s ease, background .16s ease, border-color .16s ease;
+}
+
+.yx-auth-action.is-solid {
+  background: var(--primary);
+  color: #fff;
+  border: 1px solid var(--primary);
+}
+
+.yx-auth-action.is-solid:hover {
+  background: var(--primary-d);
+  border-color: var(--primary-d);
+  transform: translateY(-1px);
+}
+
+.yx-auth-action.is-ghost {
+  border: 1px solid rgba(255, 255, 255, .34);
+  color: #fff;
+}
+
+.yx-auth-action.is-ghost:hover {
+  background: rgba(255, 255, 255, .1);
+  border-color: rgba(255, 255, 255, .55);
+}
+
+.yx-auth-points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 26px;
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, .82);
+}
+
+.yx-auth-points li {
+  position: relative;
+  padding-left: 24px;
+}
+
+.yx-auth-points li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0b1224;
+  background: #7ee2c4;
+}
+
+/* ---------------------------------- 右侧表单区 ---------------------------------- */
+
+.yx-auth-panel {
+  flex: 1 1 44%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 28px;
+  background: #fff;
+}
+
+.yx-auth-box {
+  width: 100%;
+  max-width: 420px;
+}
+
+.yx-auth-logo {
+  margin: 0 0 24px;
+  text-align: center;
+}
+
+.yx-auth-logo img {
+  height: 46px;
+  width: auto;
+  object-fit: contain;
+}
+
+.yx-auth-head {
+  margin: 0 0 26px;
+}
+
+.yx-auth-head em {
+  display: block;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 10px;
+}
+
+.yx-auth-head h1 {
+  margin: 0 0 8px;
+  font-size: 26px;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+
+.yx-auth-head p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+/* 表单字段 */
+.yx-auth-field {
+  margin: 18px 0;
+}
+
+.yx-auth-field > label,
+.yx-auth-label {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.yx-auth-field input[type="text"],
+.yx-auth-field input[type="password"],
+.yx-auth-field input[type="email"],
+.yx-auth-field input[type="tel"],
+.yx-auth-field input[type="number"],
+.yx-auth-field select {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 14px;
+  color: var(--ink);
+  box-sizing: border-box;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+
+.yx-auth-field input::placeholder {
+  color: #98a2b3;
+}
+
+.yx-auth-field input:focus,
+.yx-auth-field select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.yx-auth-field input:disabled {
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+/* 验证码行：输入框 + 获取验证码按钮 */
+.yx-auth-row {
+  display: flex;
+  gap: 10px;
+}
+
+.yx-auth-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.yx-auth-row .yx-auth-code-btn {
+  flex: 0 0 auto;
+  height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--primary);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .16s ease, color .16s ease;
+}
+
+.yx-auth-row .yx-auth-code-btn:hover:not(:disabled) {
+  background: var(--primary-soft);
+}
+
+.yx-auth-row .yx-auth-code-btn:disabled,
+.yx-auth-row .yx-auth-code-btn.is-waiting {
+  border-color: var(--line);
+  color: #98a2b3;
+  background: var(--surface-3);
+  cursor: not-allowed;
+}
+
+.yx-auth-code-tip {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.yx-auth-code-tip.is-err { color: var(--bad); }
+.yx-auth-code-tip.is-ok { color: var(--ok); }
+.yx-auth-code-tip.is-warn { color: var(--warn); }
+
+/* 提交按钮 */
+.yx-auth-submit {
+  width: 100%;
+  height: 48px;
+  margin-top: 24px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: background .16s ease, transform .16s ease;
+}
+
+.yx-auth-submit:hover {
+  background: var(--primary-d);
+}
+
+.yx-auth-submit:active {
+  transform: translateY(1px);
+}
+
+/* 条款勾选 */
+.yx-auth-legal {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 18px 0 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.yx-auth-legal input {
+  margin: 3px 0 0;
+  flex: 0 0 auto;
+  accent-color: var(--primary);
+}
+
+.yx-auth-legal a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.yx-auth-legal a:hover {
+  text-decoration: underline;
+}
+
+/* 切换到另一页 */
+.yx-auth-switch {
+  margin: 26px 0 0;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.yx-auth-switch a {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.yx-auth-switch a:hover {
+  text-decoration: underline;
+}
+
+/* 登录 / 注册方式切换：蓝色功能框 + 白色字体，当前方式高亮 */
+.yx-auth-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0 0;
+}
+
+.yx-auth-mode {
+  flex: 1 1 0;
+  min-width: 120px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  box-sizing: border-box;
+  transition: background .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+
+.yx-auth-mode:hover {
+  background: var(--primary-d);
+  border-color: var(--primary-d);
+  color: #fff;
+  text-decoration: none;
+}
+
+/* 当前所在方式：加深底色并加环，避免与普通功能框混淆 */
+.yx-auth-mode.is-active {
+  background: var(--primary-d);
+  border-color: var(--primary-d);
+  box-shadow: 0 0 0 2px var(--primary-soft);
+  cursor: default;
+}
+
+.yx-auth-mode.is-active:hover {
+  background: var(--primary-d);
+  border-color: var(--primary-d);
+}
+
+/* 底部辅助链接 */
+.yx-auth-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 22px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.yx-auth-foot a {
+  color: var(--ink-2);
+  text-decoration: none;
+}
+
+.yx-auth-foot a:hover {
+  color: var(--primary);
+}
+
+/* 提示条：沿用站内 alert 语义色，这里只收紧间距 */
+.yx-auth-box .alert {
+  margin: 0 0 18px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+/* --------------------------- LOGO 墙（认证页底部） --------------------------- */
+
+.yx-auth-wall {
+  margin: 26px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  text-align: center;
+}
+
+.yx-auth-wall-title {
+  margin: 0 0 12px;
+  font-size: 12px;
+  letter-spacing: .06em;
+  color: var(--muted);
+}
+
+.yx-auth-wall-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.yx-auth-wall-list li {
+  flex: 0 0 auto;
+  width: 84px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.yx-auth-wall-list img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  opacity: .78;
+  transition: opacity .16s ease;
+}
+
+.yx-auth-wall-list li:hover img {
+  opacity: 1;
+}
+
+/* -------------------------------- 响应式 -------------------------------- */
+
+@media (max-width: 1080px) {
+  .yx-auth-hero {
+    flex-basis: 50%;
+    padding: 40px 36px;
+  }
+
+  .yx-auth-hero-body h1 {
+    font-size: 31px;
+  }
+}
+
+/* 窄屏收起品牌区，表单居中，避免长表单被挤压 */
+@media (max-width: 900px) {
+  .yx-auth-hero {
+    display: none;
+  }
+
+  .yx-auth-panel {
+    padding: 40px 20px 56px;
+  }
+
+  .yx-auth-box {
+    max-width: 460px;
+  }
+
+  .yx-auth-head h1 {
+    font-size: 23px;
+  }
+}
+
+@media (max-width: 420px) {
+  .yx-auth-row {
+    flex-wrap: wrap;
+  }
+
+  .yx-auth-row .yx-auth-code-btn {
+    width: 100%;
+  }
+
+  .yx-auth-mode {
+    flex: 1 1 100%;
+  }
+
+  .yx-auth-foot {
+    flex-direction: column;
+    align-items: center;
+  }
+}
