@@ -56,7 +56,7 @@ const YX_AUTH_LABEL = '授权包';
 /** 授权码查看入口 */
 const YX_AUTH_PAGE  = '/user/licenses.php';
 /** 官方商店地址 */
-const YX_SHOP       = 'https://www.idcpremiumfinance.cn';
+const YX_SHOP       = 'https://www.example.com';
 
 /** 授权包价格文案 */
 function install_price_text(): string

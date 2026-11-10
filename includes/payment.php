@@ -116,7 +116,7 @@ class YxPayment
         $base = rtrim((string)setting('site_url', ''), '/');
         if ($base === '' || !preg_match('#^https?://#i', $base)) {
             $host = site_domain();
-            $base = 'https://' . ($host !== '' ? $host : 'www.idcpremiumfinance.cn');
+            $base = 'https://' . ($host !== '' ? $host : 'www.example.com');
         }
         return $base . '/' . ltrim($path, '/');
     }

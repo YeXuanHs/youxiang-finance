@@ -23,7 +23,7 @@ class YxLicense
     const STATUS_COMMUNITY = 'community';
 
     /** 授权方名称（对外展示） */
-    const OFFICIAL_NAME = '喜泓网络科技官方';
+    const OFFICIAL_NAME = 'AnchorFlow团队';
 
     /** 请求时间戳容差（秒），与开放接口保持一致 */
     const SIGN_WINDOW = 300;

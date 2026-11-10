@@ -3,7 +3,7 @@
  * 优享财务系统 · 正版购买凭证
  *
  * 客户购买官方正版授权（付费的应用 / 授权包 / 授权版本订单）支付成功后，
- * 自动生成一份《正版软件购买证明》，凭证底部加盖签发方（天津和平喜泓网络科技有限公司）
+ * 自动生成一份《正版软件购买证明》，凭证底部加盖签发方（AnchorFlow团队）
  * 电子公章，客户可在用户中心查看、打印或下载 TTF 版 PDF。
  *
  * 凭证只做「已发生的事实」的记录：单据金额、付款时间、授权码均来自订单与授权记录，
@@ -16,7 +16,7 @@ class YxCertificate
     const ORDER_TYPES = ['app', 'edition'];
 
     /** 凭证默认签发方（后台「关于我们 → 公司全称」留空时使用） */
-    const DEFAULT_ISSUER = '天津和平喜泓网络科技有限公司';
+    const DEFAULT_ISSUER = 'AnchorFlow团队';
 
     /** 购买方信息最多展示长度 */
     const NAME_MAX = 120;
@@ -591,7 +591,7 @@ class YxCertificate
             $u = trim((string)setting('license_official_api', ''));
         }
         if ($u === '') {
-            $u = 'https://' . trim((string)setting('site_domain', 'idcpremiumfinance.cn'));
+            $u = 'https://' . trim((string)setting('site_domain', 'www.example.com'));
         }
         return rtrim($u, '/');
     }
