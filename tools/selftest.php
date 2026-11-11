@@ -456,7 +456,7 @@ $appOnce = YxDb::insert('app', [
 $insOnce = YxBusiness::installApp(['app_id' => $appOnce, 'customer_id' => $cid, 'domain' => 'once.example.com']);
 t('一次性商品安装成功', !empty($insOnce['ok']));
 eq('一次性商品到期日为空（永久有效）', '', (string)YxDb::value('SELECT expire_at FROM ' . YxDb::table('app_install') . ' WHERE app_id = ?', [$appOnce]));
-eq('一次性商品返回的到期日为空', '', (string)($insOnce['expire_at'] ?? 'x'));
+t('一次性商品返回的到期日为 null（永久）', array_key_exists('expire_at', $insOnce) && $insOnce['expire_at'] === null);
 t('一次性商品权益长期有效', YxBusiness::entitlement($appOnce, $cid) !== null);
 YxBusiness::installApp(['app_id' => $appOnce, 'customer_id' => $cid, 'domain' => 'once.example.com', 'order_id' => 99]);
 eq('一次性商品再次购买仍为永久', '', (string)YxDb::value('SELECT expire_at FROM ' . YxDb::table('app_install') . ' WHERE app_id = ?', [$appOnce]));
