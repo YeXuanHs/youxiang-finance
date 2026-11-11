@@ -185,7 +185,7 @@ require dirname(__DIR__) . '/includes/user_header.php';
                 <td data-label="版本"><?= e($i['version'] ?: '-') ?></td>
                 <td data-label="绑定域名" class="mono small"><?= e($i['domain']) ?></td>
                 <td data-label="授权码" class="mono small"><?= e($iValid ? $i['license_key'] : YxBusiness::maskLicenseKey((string)$i['license_key'])) ?></td>
-                <td data-label="到期"><?= e($i['expire_at'] ?: '-') ?></td>
+                <td data-label="到期"><?= e($i['expire_at'] ?: '永久') ?></td>
                 <td data-label="状态"><?= $i['status'] === 'enabled' ? '<span class="badge badge-ok">已启用</span>' : '<span class="badge badge-mute">已停用</span>' ?></td>
                 <td data-label="更新绑定域名">
                     <form method="post" class="inline-form">

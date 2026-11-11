@@ -1358,11 +1358,15 @@ class YxBusiness
     }
 
     /** 依据计费方式计算授权/权益到期日 */
-    public static function appExpire(array $app): string
+    public static function appExpire(array $app): ?string
     {
         $bill = self::billType($app);
-        // 一次性与积分为长期；按年与免费默认一年
-        return date('Y-m-d', strtotime(($bill === 'year' || $bill === 'free') ? '+1 year' : '+50 year'));
+        // 一次性与积分 = 永久有效（到期日留空；NULL 即「永久」口径，代码里已统一按此处理）；
+        // 按年与免费默认一年
+        if ($bill === 'year' || $bill === 'free') {
+            return date('Y-m-d', strtotime('+1 year'));
+        }
+        return null;
     }
 
     /**
@@ -1374,7 +1378,7 @@ class YxBusiness
      *
      * 规则：按年 / 免费的按周期在现有到期日上顺延；一次性 / 积分属长期授权，取更晚的一方。
      */
-    public static function appExpireAfter(array $app, ?string $current): string
+    public static function appExpireAfter(array $app, ?string $current): ?string
     {
         $bill  = self::billType($app);
         $fresh = self::appExpire($app);
@@ -1389,6 +1393,10 @@ class YxBusiness
                 return $next > $fresh ? $next : $fresh;
             }
             return $fresh;
+        }
+        // 一次性 / 积分 = 永久：无论旧记录带什么到期日，统一写成永久
+        if ($fresh === null) {
+            return null;
         }
         return $keep > $fresh ? $keep : $fresh;
     }

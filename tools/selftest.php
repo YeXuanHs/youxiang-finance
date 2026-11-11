@@ -447,6 +447,20 @@ $exp3 = (string)YxDb::value('SELECT expire_at FROM ' . YxDb::table('app_install'
 t('过期后重新安装恢复有效权益', YxBusiness::entitlement($appYear, $cid) !== null);
 t('过期后重新安装从今天重新起算', $exp3 > date('Y-m-d') && strpos((string)($r3['msg'] ?? ''), $exp3) !== false);
 
+// 一次性商品（授权包类）：到期日应为空 = 永久有效
+$appOnce = YxDb::insert('app', [
+    'category_key' => 'pay', 'key' => 'selftest-once', 'name' => '自检一次性插件', 'version' => '1.0.0',
+    'price' => 366.00, 'bill_type' => 'once', 'author_type' => 'official', 'type' => 'package',
+    'edition_min' => 'basic', 'status' => 'on', 'created_at' => now(), 'updated_at' => now(),
+]);
+$insOnce = YxBusiness::installApp(['app_id' => $appOnce, 'customer_id' => $cid, 'domain' => 'once.example.com']);
+t('一次性商品安装成功', !empty($insOnce['ok']));
+eq('一次性商品到期日为空（永久有效）', '', (string)YxDb::value('SELECT expire_at FROM ' . YxDb::table('app_install') . ' WHERE app_id = ?', [$appOnce]));
+eq('一次性商品返回的到期日为空', '', (string)($insOnce['expire_at'] ?? 'x'));
+t('一次性商品权益长期有效', YxBusiness::entitlement($appOnce, $cid) !== null);
+YxBusiness::installApp(['app_id' => $appOnce, 'customer_id' => $cid, 'domain' => 'once.example.com', 'order_id' => 99]);
+eq('一次性商品再次购买仍为永久', '', (string)YxDb::value('SELECT expire_at FROM ' . YxDb::table('app_install') . ' WHERE app_id = ?', [$appOnce]));
+
 // 同一域名被另一个客户购买：不得接管原客户名下的授权记录
 YxBusiness::installApp(['app_id' => $appYear, 'customer_id' => $cid + 900000, 'domain' => 'year.example.com']);
 eq('不同客户同域名各自持有记录', 2, (int)YxDb::value('SELECT COUNT(*) FROM ' . YxDb::table('app_install') . ' WHERE app_id = ?', [$appYear]));

@@ -584,7 +584,7 @@ if ($checkResult) {
                             <p class="lc-license-small">
                                 授权包：<strong><?= e(YxBusiness::priceLabel($pkgRow)) ?> / 次</strong>（按域名签发安装授权码）
                                 <?php if ($pkgEnt): ?>
-                                    · 您已购买授权，到期 <?= e($pkgEnt['expire_at'] ?: '长期') ?>
+                                    · 您已购买授权，到期 <?= e($pkgEnt['expire_at'] ?: '永久') ?>
                                 <?php endif; ?>
                                 <br><a href="<?= e(url('store/detail.php?id=' . (int)$pkgRow['id'])) ?>">查看 / 单独购买授权包 →</a>
                             </p>
