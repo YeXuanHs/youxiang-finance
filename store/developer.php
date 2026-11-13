@@ -111,11 +111,18 @@ require dirname(__DIR__) . '/includes/header.php';
                         ?>
                             <li class="yx-shop-item">
                                 <a class="yx-card" href="<?= e(url('store/detail.php?id=' . (int)$a['id'])) ?>">
-                                    <div class="yx-card-media">
-                                        <?php if (trim((string)($a['cover'] ?? '')) !== ''): ?>
-                                            <img src="<?= e(url($a['cover'])) ?>" alt="<?= e($a['name']) ?>" loading="lazy">
+                                    <?php
+                                    $dCover = trim((string)($a['cover'] ?? ''));
+                                    $dTpl   = YxStore::isTemplate($a);
+                                    $dIco   = YxStore::icon($a);
+                                    ?>
+                                    <div class="yx-card-media<?= $dTpl && $dCover !== '' ? ' is-photo' : ' is-icon' ?>">
+                                        <?php if ($dTpl && $dCover !== ''): ?>
+                                            <img src="<?= e(url($dCover)) ?>" alt="<?= e($a['name']) ?>" loading="lazy" decoding="async">
                                         <?php else: ?>
-                                            <div class="yx-card-ico"><?= e(mb_substr($a['name'], 0, 1)) ?></div>
+                                            <span class="yx-card-ico" style="--ico-a:<?= e($dIco['a']) ?>;--ico-b:<?= e($dIco['b']) ?>">
+                                                <svg viewBox="0 0 24 24" aria-hidden="true"><?= $dIco['svg'] ?></svg>
+                                            </span>
                                         <?php endif; ?>
                                     </div>
                                     <div class="yx-card-body" style="min-height:0">

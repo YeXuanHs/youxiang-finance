@@ -101,7 +101,7 @@ require dirname(__DIR__) . '/includes/admin_header.php';
             <?php endif; ?>
         </div>
     </div>
-
+    <?= YxDispute::adminPanel($detail) ?>
     <table class="data">
         <tr><th>工单号</th><td class="mono"><?= e($detail['sn']) ?></td><th>客户</th><td><?= e($detail['username'] ?: '-') ?>（<?= e($detail['email'] ?: '-') ?>）</td></tr>
         <tr><th>部门</th><td><?= e($DEPARTMENTS[$detail['department']] ?? $detail['department']) ?></td><th>关联业务</th><td><?= e($detail['service_name'] ?: '-') ?></td></tr>
@@ -146,7 +146,7 @@ require dirname(__DIR__) . '/includes/admin_header.php';
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="reply">
             <input type="hidden" name="id" value="<?= (int)$detail['id'] ?>">
-            <label>回复内容 <textarea name="content" required placeholder="请输入回复内容"></textarea></label>
+            <label>回复内容 <textarea name="content" required placeholder="请输入回复内容"><?= !empty($detail['manual_only']) ? e(YxDispute::handoffText()) : '' ?></textarea></label>
             <button class="btn btn-primary" type="submit">提交回复</button>
         </form>
     <?php endif; ?>
@@ -174,7 +174,7 @@ require dirname(__DIR__) . '/includes/admin_header.php';
         <?php foreach ($rows as $t): ?>
             <tr>
                 <td><?= (int)$t['id'] ?></td>
-                <td class="wrap"><?= e($t['subject']) ?></td>
+                <td class="wrap"><?= e($t['subject']) ?> <?= YxDispute::badge($t) ?></td>
                 <td><?= e($t['username'] ?: '-') ?></td>
                 <td><?= e($DEPARTMENTS[$t['department']] ?? $t['department']) ?></td>
                 <td><?= e($PRIORITIES[$t['priority']] ?? $t['priority']) ?></td>

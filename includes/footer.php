@@ -46,7 +46,7 @@ $footGonganCode = preg_replace('/\D+/', '', $footGongan);
                 <h4>产品</h4>
                 <a href="<?= e(url('index.php#products')) ?>">产品服务</a>
                 <a href="<?= e(url('store/index.php')) ?>">应用商店</a>
-                <a href="<?= e(url('index.php#editions')) ?>">版本选择</a>
+                <a href="<?= e(url('goods.php')) ?>">版本套餐</a>
                 <a href="<?= e(url('index.php#license')) ?>">授权查询</a>
                 <?php if (wechat_enabled()): ?><a href="<?= e(url('index.php#wechat')) ?>">公众号</a><?php endif; ?>
             </div>
@@ -55,6 +55,8 @@ $footGonganCode = preg_replace('/\D+/', '', $footGongan);
                 <a href="<?= e(url('docs/')) ?>">帮助文档</a>
                 <a href="<?= e(url('user/tickets.php')) ?>">提交工单</a>
                 <a href="<?= e(url('report.php')) ?>">举报投诉</a>
+                <a href="<?= e(YxLegalDoc::url(YxLegalDoc::TERMS)) ?>">服务条款</a>
+                <a href="<?= e(YxLegalDoc::url(YxLegalDoc::PRIVACY)) ?>">隐私政策</a>
                 <a href="<?= e(url('infringe.php')) ?>">版权侵权处理</a>
                 <?php if (YxNews::isEnabled()): ?><a href="<?= e(url('news.php')) ?>">新闻公告</a><?php endif; ?>
                 <a href="<?= e(url('career.php')) ?>">加入我们 / 招聘</a>

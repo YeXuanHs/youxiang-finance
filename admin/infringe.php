@@ -78,6 +78,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') !=
         YxDb::update('app', ['status' => 'off', 'updated_at' => now()], 'id = :id', ['id' => (int)($_POST['id'] ?? 0)]);
         $res  = ['ok' => true, 'msg' => '已下架'];
         $back = 'scan';
+    } elseif ($action === 'legal_review') {
+        // 法务复核：纯人工动作，只登记结论，不触发任何外发
+        $res  = YxInfringeLegal::review(
+            (string)($_POST['sn'] ?? ''),
+            (string)($_POST['decision'] ?? ''),
+            (string)($_POST['reviewer'] ?? ''),
+            (string)($_POST['note'] ?? '')
+        );
+        $back = 'reports';
+    } elseif ($action === 'legal_draft') {
+        // 生成律师函草稿：须先通过法务复核，且只返回文本，不发送
+        $draft = YxInfringeLegal::legalLetterDraft((string)($_POST['sn'] ?? ''));
+        if (!empty($draft['ok'])) {
+            // 草稿只进本次会话，供页面只读展示；不落盘、不外发
+            $_SESSION['_letter_draft'] = ['sn' => (string)($_POST['sn'] ?? ''), 'text' => (string)$draft['draft']];
+            $res = ['ok' => true, 'msg' => '草稿已生成（未发送），请在下方查看'];
+        } else {
+            $res = ['ok' => false, 'msg' => (string)$draft['message']];
+        }
+        $back = 'reports';
     } elseif ($action === 'save_settings') {
         set_setting('infringe_ext_enabled', !empty($_POST['infringe_ext_enabled']) ? '1' : '0');
         set_setting('infringe_ext_method', in_array($_POST['infringe_ext_method'] ?? '', ['POST_JSON', 'POST_FORM', 'GET'], true) ? $_POST['infringe_ext_method'] : 'POST_JSON');
@@ -314,6 +334,14 @@ require dirname(__DIR__) . '/includes/admin_header.php';
     </div>
 
 <?php else: ?>
+    <?php $letterDraft = $_SESSION['_letter_draft'] ?? null; unset($_SESSION['_letter_draft']); ?>
+    <?php if ($letterDraft): ?>
+    <div class="card">
+        <h2>律师函草稿 · <?= e((string)$letterDraft['sn']) ?>（草稿 · 未签发 · 未发送）</h2>
+        <pre class="mono small" style="white-space:pre-wrap;background:#f6f8fc;padding:10px;border-radius:8px"><?= e((string)$letterDraft['text']) ?></pre>
+        <p class="muted small">本页只作草稿展示，系统未向任何对象发送该文本；签发须由法务人工完成。</p>
+    </div>
+    <?php endif; ?>
     <div class="card">
         <h2>侵权举报（<?= count($reports) ?>）</h2>
         <div class="table-wrap"><table class="data">
@@ -322,16 +350,22 @@ require dirname(__DIR__) . '/includes/admin_header.php';
             <?php foreach ($reports as $r): ?>
                 <tr>
                     <td class="mono small"><?= e($r['sn']) ?></td>
-                    <td class="wrap"><?= e($r['work_title']) ?><br><span class="muted small"><?= e($r['work_owner'] ?: '-') ?></span></td>
+                    <td class="wrap"><?= e($r['work_title']) ?> <?= YxDispute::badge($r) ?><br><span class="muted small"><?= e($r['work_owner'] ?: '-') ?></span></td>
                     <td class="small">
                         <?= e(['app' => '应用', 'url' => '链接', 'text' => '文本'][$r['target_type']] ?? $r['target_type']) ?>
                         <?php if ((int)$r['target_app_id'] > 0): ?> #<?= (int)$r['target_app_id'] ?><?php endif; ?>
                         <?php if ($r['target_url']): ?><br><span class="mono"><?= e($r['target_url']) ?></span><?php endif; ?>
                     </td>
                     <td><span class="badge <?= e($riskCls[$r['risk']] ?? 'badge-mute') ?>"><?= e(YxInfringe::riskName((string)$r['risk'])) ?></span> <?= (int)$r['score'] ?></td>
-                    <td><span class="badge <?= $r['status'] === 'takedown' ? 'badge-bad' : ($r['status'] === 'closed' ? 'badge-mute' : 'badge-warn') ?>"><?= e(YxInfringe::statusName((string)$r['status'])) ?></span></td>
+                    <td><span class="badge <?= $r['status'] === 'takedown' ? 'badge-bad' : ($r['status'] === 'closed' ? 'badge-mute' : 'badge-warn') ?>"><?= e(YxInfringe::statusName((string)$r['status'])) ?></span>
+                        <?php if (($r['kind'] ?? 'report') === 'infringe'): ?>
+                            <br><span class="badge <?= ($r['review_status'] ?? '') === 'approved' ? 'badge-ok' : (($r['review_status'] ?? '') === 'rejected' ? 'badge-mute' : 'badge-info') ?>"><?= e(YxInfringeLegal::reviewName((string)($r['review_status'] ?? 'none'))) ?></span>
+                            <?php if (!empty($r['demand'])): ?><br><span class="muted small"><?= e(YxInfringeLegal::demandName((string)$r['demand'])) ?></span><?php endif; ?>
+                        <?php endif; ?>
+                    </td>
                     <td class="small muted"><?= e($r['created_at']) ?></td>
                     <td>
+                        <?= YxDispute::adminPanel($r) ?>
                         <form method="post" class="row-actions">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="report_handle">
@@ -344,6 +378,29 @@ require dirname(__DIR__) . '/includes/admin_header.php';
                             <input type="text" name="note" placeholder="处理说明" style="width:130px">
                             <button class="btn btn-sm btn-primary" type="submit">提交</button>
                         </form>
+                        <?php if (($r['kind'] ?? 'report') === 'infringe'): ?>
+                        <form method="post" class="row-actions" style="margin-top:6px">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="legal_review">
+                            <input type="hidden" name="sn" value="<?= e($r['sn']) ?>">
+                            <select name="decision">
+                                <option value="approved">法务复核通过</option>
+                                <option value="rejected">驳回 / 撤销误判</option>
+                            </select>
+                            <input type="text" name="reviewer" placeholder="法务复核人（必填）" style="width:130px" required>
+                            <input type="text" name="note" placeholder="复核意见" style="width:130px">
+                            <button class="btn btn-sm btn-primary" type="submit">登记复核</button>
+                        </form>
+                        <?php if (($r['review_status'] ?? '') === 'approved'): ?>
+                        <form method="post" style="margin-top:6px">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="legal_draft">
+                            <input type="hidden" name="sn" value="<?= e($r['sn']) ?>">
+                            <button class="btn btn-sm btn-ghost" type="submit">生成律师函草稿（不发送）</button>
+                        </form>
+                        <?php endif; ?>
+                        <p class="muted small" style="margin:6px 0 0">系统不自动外发任何函件；签发须由法务人工完成</p>
+                        <?php endif; ?>
                     </td>
                 </tr>
             <?php endforeach; ?>

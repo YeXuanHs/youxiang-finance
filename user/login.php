@@ -103,6 +103,20 @@ $siteSub   = setting('site_sub', '');
                 <input type="hidden" name="back" value="<?= e($back) ?>">
                 <input type="hidden" name="mode" value="<?= e($mode) ?>">
 
+                <?php /*
+                 * 登录方式放在表单顶部，只负责切换 mode（并保留 back 回跳），
+                 * 真正的提交统一由条款下方的「登 录」按钮完成。
+                 */ ?>
+                <div class="yx-auth-modes" role="group" aria-label="登录方式">
+                    <?php if ($byPhone): ?>
+                        <a class="yx-auth-mode is-active" href="<?= e(url('user/login.php?mode=phone&back=' . urlencode($back))) ?>" aria-current="true">手机登录</a>
+                        <a class="yx-auth-mode" href="<?= e(url('user/login.php?mode=email&back=' . urlencode($back))) ?>">邮箱登录</a>
+                    <?php else: ?>
+                        <a class="yx-auth-mode" href="<?= e(url('user/login.php?mode=phone&back=' . urlencode($back))) ?>">手机登录</a>
+                        <a class="yx-auth-mode is-active" href="<?= e(url('user/login.php?mode=email&back=' . urlencode($back))) ?>" aria-current="true">邮箱登录</a>
+                    <?php endif; ?>
+                </div>
+
                 <div class="yx-auth-field">
                     <label for="loginAccount"><?= $byPhone ? '手机号' : '邮箱地址' ?></label>
                     <input type="<?= $byPhone ? 'tel' : 'email' ?>" id="loginAccount" name="account" required autofocus
@@ -115,24 +129,20 @@ $siteSub   = setting('site_sub', '');
                            autocomplete="current-password" placeholder="请输入登录密码">
                 </div>
 
+                <?php /* 同意声明：登录即代表已阅读并同意两份法律文档，下方紧跟主提交按钮 */ ?>
+                <div class="yx-auth-legal yx-auth-legal--static">
+                    <span class="yx-auth-legal-txt">登录即表示已阅读并同意<a href="<?= e(YxLegalDoc::url(YxLegalDoc::TERMS)) ?>" target="_blank" rel="noopener">《服务条款》</a>与<a href="<?= e(YxLegalDoc::url(YxLegalDoc::PRIVACY)) ?>" target="_blank" rel="noopener">《隐私政策》</a></span>
+                </div>
+
                 <button class="yx-auth-submit" type="submit">登 录</button>
+
+                <div class="yx-auth-foot">
+                    <a href="<?= e(url('index.php')) ?>">← 返回首页</a>
+                    <a href="<?= e(url('user/tickets.php')) ?>">联系客服</a>
+                </div>
             </form>
 
-            <p class="yx-auth-switch">还没有账户？<a href="<?= e(url('user/register.php')) ?>">免费注册</a></p>
-
-            <div class="yx-auth-modes">
-                <a class="yx-auth-mode<?= $byPhone ? ' is-active' : '' ?>" href="<?= e(url('user/login.php?mode=phone')) ?>"
-                   <?= $byPhone ? 'aria-current="true"' : '' ?>>手机登录</a>
-                <a class="yx-auth-mode<?= $byPhone ? '' : ' is-active' ?>" href="<?= e(url('user/login.php?mode=email')) ?>"
-                   <?= $byPhone ? '' : 'aria-current="true"' ?>>邮箱登录</a>
-            </div>
-
-            <div class="yx-auth-foot">
-                <a href="<?= e(url('index.php')) ?>">← 返回首页</a>
-                <a href="<?= e(url('user/tickets.php')) ?>">联系客服</a>
-            </div>
-
-            <?php require dirname(__DIR__) . '/includes/logo_wall.php'; ?>
+            <p class="yx-auth-switch">还没有账户？<a href="<?= e(url('user/register.php?mode=phone')) ?>">手机注册</a><span class="yx-auth-switch-sep">·</span><a href="<?= e(url('user/register.php?mode=email')) ?>">邮箱注册</a></p>
         </div>
     </main>
 </div>

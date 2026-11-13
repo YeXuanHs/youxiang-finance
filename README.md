@@ -3,7 +3,7 @@
 > 企业与业务一体化管理平台 —— 产品目录、订单、客户、账单、工单、续费、应用商店、授权中心，一套系统跑通。
 > 明文 PHP，前后端可直接修改；MySQL / SQLite 双驱动，复制到站点根目录即可安装。
 
-[![version](https://img.shields.io/badge/version-1.6.2-3b5bfd)](发行说明.md)
+[![version](https://img.shields.io/badge/version-1.6.4-3b5bfd)](发行说明.md)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![php](https://img.shields.io/badge/php-7.4%20~%208.2-8892bf)]()
 [![db](https://img.shields.io/badge/db-MySQL%20%7C%20SQLite-4479a1)]()
@@ -72,7 +72,7 @@
 ├─ api/                 对外接口：v1、支付回调、授权查询、资源下载
 ├─ includes/            业务内核（业务、财务、授权、支付、商店、上游…）
 ├─ install/             安装向导
-├─ tools/               自检、结构升级、构建发行包、授权码生成
+├─ tools/               定时任务、结构升级
 ├─ assets/              CSS / JS / Logo
 ├─ uploads/             上传与文档配图（运行时可写目录）
 ├─ runtime/  cache/     日志与缓存（不可被直接访问）
@@ -89,55 +89,34 @@
 | 专业版 pro | 2 | 工单、续费、优惠券、渠道分销、商店购买 |
 | 企业版 enterprise | 3 | 多节点、分站/多站点、开放 API、经营分析、批量导出 |
 
-## 授权说明（开源版）
+## 授权说明（企业版）
 
-> **本开源版已移除安装授权码校验。**
+> **本发行包为企业版，安装与运行均不需要授权码，也不需要连接任何授权中心。**
 
-- 安装向导**不再索要授权码**：第 2 步「授权前提」恒显示「已授权 · 无需授权码」，第 4 步授权码可留空，任意内容也判定为通过。
-- 安装完成后站点恒为**「域名已正版授权」**，版本上限为**企业版**。
-- 实现方式见 `includes/license.php` 的 `ALWAYS_AUTHORIZED` 常量（改为 `false` 即恢复「按域名校验授权」的原始逻辑）。
-- 授权相关的数据表、后台授权中心、域名授权检测工具全部保留可用，便于自建授权分发。
+- **安装向导不索要授权码**：第 2 步「授权前提」显示「已授权 · 无需授权码」，第 4 步授权码可留空，任意内容同样通过。
+- **安装完成即为正版授权**：前后台角标统一显示「域名已正版授权」，授权版本上限为**企业版**。
+- **版本档位不做收敛**：普惠版 / 专业版 / 企业版三档在后台「版本授权」可自由切换，企业版专属能力（资源节点、经营分析、分站、开放 API、授权中心）全部可用。
+- **授权中心仍可用**：`api/license.php` 的 `query` / `pkg_verify` / `pkg_sig_verify` 动作均可正常应答，可作为下游站点的授权服务端。
+- 实现见 `includes/license/community.php`（离线授权模块）：`query()` / `badge()` / `isAuthorized()` 恒返回已授权 · 企业版，`mode()` 为 `official`，`modeLocked()` 为 `false`。
 
-### 兼容旧版正式发行包：自签授权码
+### 授权码生成（自用签发）
 
-早前的正式版发行包在安装第 4 步会按当前域名**离线复核授权码**。开源版把校验移除了，但为了让你能在旧包上继续完成安装，这里公开主程序包的产品密钥与生成方法。
-
-**产品密钥**（与 `includes/license.php` 的 `PACKAGE_SECRET` 一致）
-
-```
-YX-PKG-9F2C7A41D6B85E30A1C4F7D29B6E5A83C0D1F7E2
-```
-
-**方式一：用自带工具（推荐）**
-
-```bash
-php tools/gen_license.php example.com
-# 域名     : example.com
-# 产品标识 : official
-# 授权码   : C420-EA9B-BEA0-10BA
-
-php tools/gen_license.php example.com community
-# 域名     : example.com
-# 产品标识 : community
-# 授权码   : 097F-1167-FFD2-F04C
-```
-
-**方式二：一行命令**
-
-```bash
-php -r "echo implode('-', str_split(strtoupper(substr(hash_hmac('sha256','package|official|example.com','YX-PKG-9F2C7A41D6B85E30A1C4F7D29B6E5A83C0D1F7E2'),0,16)),4)), PHP_EOL;"
-# C420-EA9B-BEA0-10BA
-```
-
-**算法**
+授权码由「域名 + 版本」按固定散列规则算出，**不依赖任何密钥**，可离线复算：
 
 ```
-授权码 = strtoupper(substr(hash_hmac('sha256', "package|{product}|{domain}", 密钥), 0, 16))
+授权码 = strtoupper(substr(hash('sha256', "community|{domain}|{edition}|{expire}"), 0, 16))
         每 4 位一组，用 "-" 连接
 ```
 
-- `product`：`official`（正版产品标识）或 `community`（开源版产品标识），两者互不通用。
-- `domain`：必须与安装第 3 步填写的「网站域名」**完全一致**（大小写、是否带 `www.` 都会影响结果；工具的域名规范化与系统内 `normalize_domain()` 同口径）。
+- `domain`：安装第 3 步填写的「网站域名」，需与系统内 `normalize_domain()` 同口径（小写、去掉协议与端口）。
+- `edition`：`basic` / `pro` / `enterprise`。
+- `expire`：到期日，留空表示永久。
+
+一行命令生成：
+
+```bash
+php -r "echo implode('-', str_split(strtoupper(substr(hash('sha256','community|example.com|enterprise|'),0,16)),4)), PHP_EOL;"
+```
 
 ## 常用工具
 
@@ -145,10 +124,7 @@ php -r "echo implode('-', str_split(strtoupper(substr(hash_hmac('sha256','packag
 |---|---|
 | `php tools/selftest.php` | 端到端自检：建表 → 客户 → 财务 → 订单 → 交付 → 续费 → 工单 → 商店 → 授权，跑在独立临时库，不触碰正式数据 |
 | `php tools/upgrade.php --dry-run` | 结构升级预演：已有站点升级代码后补齐新增表/字段/索引（只做加法，不删列、不清空数据） |
-| `php tools/gen_license.php <域名> [official\|community]` | 生成安装授权码（见上） |
-| `php tools/build_release.php` | 构建发行包：重置配置与密钥、裁剪运行期目录、生成发行说明 |
 | `php tools/cron.php` | 定时任务：驱动上游开通与自动续费 |
-| `php tools/import_zjmf.php` | 从其它面板迁移商品与订单数据 |
 
 ## 二次开发
 

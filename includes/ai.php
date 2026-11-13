@@ -174,7 +174,7 @@ class YxAiMock implements YxAiDriver
                     $plugin = (float)setting('developer_plugin_deposit_amount', setting('developer_deposit_amount', 600));
                     $tpl    = (float)setting('developer_template_deposit_amount', 0);
                     $app    = (float)setting('developer_deposit_amount', 600);
-                    $lines  = ['开发者入驻流程：「实名核验 → 缴纳保证金 → 管理员审核」，通过后即可上传应用并在优享商店售卖。入口在「用户中心 → 开发者中心」。'];
+                    $lines  = ['开发者入驻流程：「实名核验 → 缴纳保证金 → 管理员审核」，通过后即可上传应用并在插件中心售卖。入口在「用户中心 → 开发者中心」。'];
                     $lines[] = '保证金按类型收取（按年计，用于保障买家权益，可申请退还）：';
                     $lines[] = '· 应用 / 插件类：' . money($app, true) . '/年（插件按年 ' . money($plugin, true) . '/年）';
                     $lines[] = '· 模板类：' . ($tpl > 0 ? money($tpl, true) . '/年' : '免保证金（0 元即可上传）');
@@ -191,12 +191,12 @@ class YxAiMock implements YxAiDriver
                     $open = YxDb::one('SELECT * FROM ' . YxDb::table('app') . " WHERE status = 'on' AND `key` = 'youxiang-finance-open' LIMIT 1");
                     $lines = [];
                     if ($open) {
-                        $lines[] = '开源版（社区版）主程序包：' . (string)$open['name'] . '，价格 ' . YxBusiness::priceLabel($open) . '，在「应用商店 → 主程序」可直接获取。';
+                        $lines[] = '开源版（社区版）主程序包：' . (string)$open['name'] . '，价格 ' . YxBusiness::priceLabel($open) . '，在「用户中心 → 我的授权」可直接获取。';
                     } else {
-                        $lines[] = '开源版（社区版）主程序包可在「应用商店 → 主程序」免费获取。';
+                        $lines[] = '开源版（社区版）主程序包可在「用户中心 → 我的授权」免费获取。';
                     }
                     $lines[] = '开源版特点：完全免费、授权模块不参与官方校验；但功能固定为社区版形态，不提供正版后续升级与技术支持，该形态安装后不可切换回正式版。';
-                    $lines[] = '如果需要完整功能与持续更新，可免费下载正版程序包，再按需单独购买授权包（' . self::officialPriceLabel() . '），凭安装授权码在安装向导第 4 步激活。';
+                    $lines[] = '如果需要完整功能与持续更新，可购买正版程序包（' . self::programPriceLabel() . '），再按需单独购买授权包（' . self::officialPriceLabel() . '），凭安装授权码在安装向导第 4 步激活；开源版免费。';
                     return implode("\n", $lines);
                 },
             ],
@@ -206,8 +206,8 @@ class YxAiMock implements YxAiDriver
                 'id' => 'package',
                 'kw' => ['正版程序包' => 12, '程序包' => 8, '授权包' => 12, '安装码' => 10, '授权码' => 9, '主程序' => 8, '怎么安装' => 8, '安装教程' => 9, '怎么部署' => 8, '安装' => 4, '部署' => 4, '源码' => 6],
                 'a'  => function (string $site, ?array $customer = null) {
-                    $lines = ['正版程序包免费下载，授权包（安装授权码）另计：' . self::officialPriceLabel() . ' / 次（按域名签发 1 个授权码），程序包与授权包分开收费。'];
-                    $lines[] = '1) 到「应用商店」程序包条目直接免费下载（登录后即可，无需先买授权）；';
+                    $lines = ['正版程序包 ' . self::programPriceLabel() . '，授权包（安装授权码）' . self::officialPriceLabel() . '（按域名签发 1 个授权码），程序包与授权包分开收费；开源版免费。'];
+                    $lines[] = '1) 登录后到「用户中心 → 我的授权」购买并下载正版程序包（' . self::programPriceLabel() . '）；';
                     $lines[] = '2) 需要正版授权时，在同一页面单独购买授权包，支付成功后到「用户中心 → 我的授权」查看安装授权码；';
                     $lines[] = '3) 上传程序包到站点根目录，浏览器访问 /install/ 进入安装向导；';
                     $lines[] = '4) 填写数据库与站点信息；';
@@ -242,12 +242,12 @@ class YxAiMock implements YxAiDriver
                 'a'  => '购买流程：登录后进入「首页 → 产品服务」选择套餐 → 确认配置与计费周期 → 提交订单 → 扫码支付（支持码支付通道） → 支付成功后自动开通，可在「用户中心 → 我的业务」查看。也支持「用户中心 → 余额充值」后使用余额支付。',
             ],
 
-            /* ---------------- 应用商店 / 授权 ---------------- */
+            /* ---------------- 插件中心 / 授权 ---------------- */
             [
                 'id' => 'store',
-                'kw' => ['应用商店' => 9, '插件' => 7, '应用' => 5, '主题' => 5, '支付通道' => 7, '实名认证' => 6, '对接' => 3, '商店' => 6, '下载' => 5],
+                'kw' => ['应用商店' => 9, '插件中心' => 9, '插件' => 7, '应用' => 5, '主题' => 5, '支付通道' => 7, '实名认证' => 6, '对接' => 3, '商店' => 6, '下载' => 5],
                 'a'  => function () {
-                    $lines = ['应用商店在「应用商店」导航进入，分类包括：'];
+                    $lines = ['插件已统一在「用户中心 → 插件中心」选购，分类包括：'];
                     $cats = [];
                     foreach (YxDb::all('SELECT name FROM ' . YxDb::table('app_category') . ' WHERE status = 1 ORDER BY sort ASC, id ASC LIMIT 9') as $c) {
                         $cats[] = (string)$c['name'];
@@ -361,7 +361,7 @@ class YxAiMock implements YxAiDriver
                 'id' => 'greet',
                 'kw' => ['你好' => 8, '您好' => 8, 'hi' => 5, 'hello' => 5, '在吗' => 7, '在么' => 7, '有人吗' => 8, '谢谢' => 6, '感谢' => 6],
                 'a'  => function (string $site, ?array $customer = null) {
-                    return "您好，我是「{$site}」的小优助手，7×24 小时在线为您解答。\n您可以直接问我：产品价格、如何购买与开通、授权码与安装、应用商店插件、开发者入驻与保证金、分销推广、发票与退款、续费、账号问题。解决不了的我帮您转人工。";
+                    return "您好，我是「{$site}」的小优助手，7×24 小时在线为您解答。\n您可以直接问我：产品价格、如何购买与开通、授权码与安装、插件中心、开发者入驻与保证金、分销推广、发票与退款、续费、账号问题。解决不了的我帮您转人工。";
                 },
             ],
 
@@ -369,7 +369,7 @@ class YxAiMock implements YxAiDriver
             [
                 'id' => 'help',
                 'kw' => ['能做什么' => 9, '你会什么' => 9, '帮我做什么' => 8, '功能' => 6, '怎么用' => 5, 'help' => 5, '帮助' => 6],
-                'a'  => '我可以帮您查：产品与价格、购买开通流程、授权查询与授权码安装、应用商店插件、开发者入驻与保证金规则、分销佣金规则、发票与退款政策、续费方式、账号与实名问题。直接描述您的问题即可，答不上的会自动为您转人工。',
+                'a'  => '我可以帮您查：产品与价格、购买开通流程、授权查询与授权码安装、插件中心、开发者入驻与保证金规则、分销佣金规则、发票与退款政策、续费方式、账号与实名问题。直接描述您的问题即可，答不上的会自动为您转人工。',
             ],
         ];
     }
@@ -386,18 +386,43 @@ class YxAiMock implements YxAiDriver
         }
     }
 
-    /** 授权包价格文案（价格取商店条目，未上架时回退配置）；程序包本体免费下载，与授权包分开收费 */
-    private static function officialPriceLabel(): string
+    /**
+     * 正版程序包价格文案（金额 + 计费单位）
+     *
+     * 与授权包分别取价：正版程序包按次收费，开源版免费。未上架时回退配置价。
+     */
+    private static function programPriceLabel(): string
     {
         try {
             $row = YxDb::one('SELECT * FROM ' . YxDb::table('app') . " WHERE status = 'on' AND `key` = 'youxiang-finance-official' LIMIT 1");
             if ($row) {
-                return YxBusiness::priceLabel($row);
+                $unit = YxBusiness::billType($row) === 'year' ? '/年' : '/次';
+                return money((float)$row['price'], true) . $unit;
             }
         } catch (Throwable $e) {
             /* 查询失败时回退配置价，不影响回答 */
         }
-        return money((float)setting('official_package_price', 366), true) . ' 一次性';
+        return money((float)setting('official_program_price', 88), true) . '/次';
+    }
+
+    /**
+     * 授权包价格文案（金额 + 计费单位）
+     *
+     * 价格取商店条目，未上架时回退配置。这里不用 priceLabel()：后者对一次性商品
+     * 已带「一次性」后缀，调用处再拼「/ 次」会变成「¥366.00 一次性 / 次」。
+     */
+    private static function officialPriceLabel(): string
+    {
+        try {
+            $row = YxDb::one('SELECT * FROM ' . YxDb::table('app') . " WHERE status = 'on' AND `key` = 'youxiang-finance-license' LIMIT 1");
+            if ($row) {
+                $unit = YxBusiness::billType($row) === 'year' ? '/年' : '/次';
+                return money((float)$row['price'], true) . $unit;
+            }
+        } catch (Throwable $e) {
+            /* 查询失败时回退配置价，不影响回答 */
+        }
+        return money((float)setting('official_package_price', 366), true) . '/次';
     }
 
     private static function productCount(): int
@@ -523,7 +548,7 @@ class YxAi
         if (setting('contact_email', '')) {
             $lines[] = '客服邮箱：' . setting('contact_email');
         }
-        $lines[] = '主要能力：产品购买与续费、账单与发票、域名授权查询、应用商店（支付/实名/云对接/主题等）、开发者中心（实名核验+保证金后上传插件主题模板售卖）、每日签到。';
+        $lines[] = '主要能力：产品购买与续费、账单与发票、域名授权查询、插件中心（支付/实名/云对接/主题等）、开发者中心（实名核验+保证金后上传插件主题模板售卖）、每日签到。';
         return implode("\n", $lines);
     }
 

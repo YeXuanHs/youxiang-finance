@@ -3,8 +3,12 @@
  * 优享财务系统 · 应用中心（前台商店）
  *
  * 版式参考 IDC 应用中心目录页：英雄区搜索 + 排序条 + 多行筛选 + 四列卡片。
- * 价格与计费方式完全取自数据库（bill_type / price / points_price），
- * 购买动作交由 user/app_redeem.php，与详情页保持一致。
+ * 价格与计费方式完全取自数据库（bill_type / price / points_price / price_options），
+ * 购买动作交由 user/purchase.php，与详情页保持一致。
+ *
+ * 注意：商品一旦配置了按授权版本差异化的报价（price_options），计费方式与价格就不再
+ * 由 app.bill_type / app.price 决定。因此「费用类型」筛选、计数与价格排序都必须按报价
+ * 计算，否则会出现「筛选免费却混进只卖付费档位的商品」「按价格排序与卡片显示价不一致」。
  */
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 yx_require_installed();
@@ -17,66 +21,104 @@ $authorF = trim((string)($_GET['author'] ?? ''));   // official | thirdparty
 $billF   = trim((string)($_GET['bill'] ?? ''));     // free | once | year | points
 $sortF   = trim((string)($_GET['sort'] ?? 'default'));
 
-$where = " WHERE status = 'on'";
-$bind  = [];
-
-if ($catF !== '') {
-    $where  .= ' AND category_key = ?';
-    $bind[] = $catF;
+/**
+ * 取满足筛选条件的基础结果集
+ *
+ * 计费方式需要按报价计算，SQL 的 bill_type 只能作为粗筛：分版本报价的商品
+ * 其 bill_type 是「默认档位」的快照，与实际可售档位可能不同。这里统一取基础集
+ * 后在 PHP 侧按 YxStore 口径过滤，避免两套判断。
+ */
+function store_fetch(string $catF, string $kw, string $authorF, string $billF): array
+{
+    $where = " WHERE status = 'on'";
+    $bind  = [];
+    if ($catF !== '') {
+        $where  .= ' AND category_key = ?';
+        $bind[] = $catF;
+    }
+    if ($kw !== '') {
+        $where .= ' AND (name LIKE ? OR description LIKE ? OR author LIKE ?)';
+        $kwl    = '%' . $kw . '%';
+        array_push($bind, $kwl, $kwl, $kwl);
+    }
+    if ($authorF === 'official') {
+        $where .= " AND COALESCE(author_type,'official') <> 'thirdparty'";
+    } elseif ($authorF === 'thirdparty') {
+        $where .= " AND author_type = 'thirdparty'";
+    }
+    $rows = YxDb::all('SELECT * FROM ' . YxDb::table('app') . $where, $bind);
+    if (!in_array($billF, ['free', 'once', 'year', 'points'], true)) {
+        return $rows;
+    }
+    $out = [];
+    foreach ($rows as $r) {
+        foreach (YxStore::quotes($r) as $q) {
+            if ((string)$q['bill_type'] === $billF) {
+                $out[] = $r;
+                break;
+            }
+        }
+    }
+    return $out;
 }
-if ($kw !== '') {
-    $where .= ' AND (name LIKE ? OR description LIKE ? OR author LIKE ?)';
-    $kwl    = '%' . $kw . '%';
-    array_push($bind, $kwl, $kwl, $kwl);
+
+/** 排序：只允许白名单，避免拼接注入；价格按「起价」比较，与卡片展示一致 */
+function store_sort(array $rows, string $sortF): array
+{
+    $price = static function (array $a): float {
+        $from = YxStore::fromPrice($a);
+        return $from === null ? -1.0 : (float)$from;   // 全免费排在最便宜一侧
+    };
+    usort($rows, static function (array $a, array $b) use ($sortF, $price): int {
+        switch ($sortF) {
+            case 'downloads':
+                return [(int)$b['downloads'], (int)$b['id']] <=> [(int)$a['downloads'], (int)$a['id']];
+            case 'sales':
+                return [(int)$b['sales'], (int)$b['id']] <=> [(int)$a['sales'], (int)$a['id']];
+            case 'new':
+                return (int)$b['id'] <=> (int)$a['id'];
+            case 'price_asc':
+                return [$price($a), (int)$b['id']] <=> [$price($b), (int)$a['id']];
+            case 'price_desc':
+                return [$price($b), (int)$b['id']] <=> [$price($a), (int)$a['id']];
+            default:
+                return [(int)$b['featured'], (int)$b['sales'], (int)$b['id']]
+                    <=> [(int)$a['featured'], (int)$a['sales'], (int)$a['id']];
+        }
+    });
+    return $rows;
 }
-if ($authorF === 'official') {
-    $where .= " AND COALESCE(author_type,'official') <> 'thirdparty'";
-} elseif ($authorF === 'thirdparty') {
-    $where .= " AND author_type = 'thirdparty'";
-}
-if (in_array($billF, ['free', 'once', 'year', 'points'], true)) {
-    $where  .= ' AND bill_type = ?';
-    $bind[] = $billF;
-}
 
-/** 排序：只允许白名单，避免拼接注入 */
-$orderMap = [
-    'default'    => 'featured DESC, sales DESC, id DESC',
-    'downloads'  => 'downloads DESC, id DESC',
-    'sales'      => 'sales DESC, id DESC',
-    'price_asc'  => 'price ASC, id DESC',
-    'price_desc' => 'price DESC, id DESC',
-    'new'        => 'id DESC',
-];
-$order = $orderMap[$sortF] ?? $orderMap['default'];
+$matched = store_sort(store_fetch($catF, $kw, $authorF, $billF), $sortF);
+$total   = count($matched);
+$page    = paginate($total, 16);
+$apps    = array_slice($matched, (int)$page['offset'], (int)$page['per_page']);
 
-$total = (int)YxDb::value('SELECT COUNT(*) FROM ' . YxDb::table('app') . $where, $bind);
-$page  = paginate($total, 16);
-$apps  = YxDb::all(
-    'SELECT * FROM ' . YxDb::table('app') . $where . ' ORDER BY ' . $order
-    . ' LIMIT ' . (int)$page['per_page'] . ' OFFSET ' . (int)$page['offset'],
-    $bind
-);
-
-/** 分类计数（不受当前分类筛选影响，便于横向比较） */
-$catCount = [];
-foreach (YxDb::all("SELECT category_key, COUNT(*) AS cnt FROM " . YxDb::table('app') . " WHERE status = 'on' GROUP BY category_key") as $r) {
-    $catCount[$r['category_key']] = (int)$r['cnt'];
-}
-$allCount = (int)YxDb::value("SELECT COUNT(*) FROM " . YxDb::table('app') . " WHERE status = 'on'");
-
-/** 认证类型计数 */
-$officialCount = (int)YxDb::value("SELECT COUNT(*) FROM " . YxDb::table('app') . " WHERE status = 'on' AND COALESCE(author_type,'official') <> 'thirdparty'");
-$thirdCount    = (int)YxDb::value("SELECT COUNT(*) FROM " . YxDb::table('app') . " WHERE status = 'on' AND author_type = 'thirdparty'");
-
-/** 费用类型计数 */
-$billCount = ['free' => 0, 'once' => 0, 'year' => 0, 'points' => 0];
-foreach (YxDb::all("SELECT bill_type, COUNT(*) AS cnt FROM " . YxDb::table('app') . " WHERE status = 'on' GROUP BY bill_type") as $r) {
-    $k = (string)$r['bill_type'];
-    if (isset($billCount[$k])) {
-        $billCount[$k] = (int)$r['cnt'];
+/** 分类 / 认证 / 费用类型计数：同一口径，均对所有上架商品按报价归类 */
+$catCount      = [];
+$officialCount = 0;
+$thirdCount    = 0;
+$billCount     = ['free' => 0, 'once' => 0, 'year' => 0, 'points' => 0];
+$allRows       = YxDb::all("SELECT * FROM " . YxDb::table('app') . " WHERE status = 'on'");
+foreach ($allRows as $r) {
+    $ck = (string)$r['category_key'];
+    $catCount[$ck] = ($catCount[$ck] ?? 0) + 1;
+    if ((string)($r['author_type'] ?? '') === 'thirdparty') {
+        $thirdCount++;
+    } else {
+        $officialCount++;
+    }
+    // 同一商品可能同时有多个计费方式（如普惠版免费 + 专业版按年），各计一次
+    $seen = [];
+    foreach (YxStore::quotes($r) as $q) {
+        $bk = (string)$q['bill_type'];
+        if (isset($billCount[$bk]) && !isset($seen[$bk])) {
+            $billCount[$bk]++;
+            $seen[$bk] = true;
+        }
     }
 }
+$allCount = count($allRows);
 
 /** 保留筛选条件的链接 */
 function store_url(array $override = []): string
@@ -218,28 +260,42 @@ $bills     = [
                 <ul class="yx-shop-grid">
                     <?php foreach ($apps as $a): ?>
                         <?php
-                        $bill    = YxBusiness::billType($a);
                         $isThird = (string)($a['author_type'] ?? '') === 'thirdparty';
                         $cover   = trim((string)($a['cover'] ?? ''));
+                        // 模板 / 主题走「图片」形式（封面图），插件与应用走「图标」形式（分类图标）；
+                        // 但图片地址失效（未上传 / 文件被删）时必须回落到图标，否则整张卡片是破图
+                        if ($cover !== '' && !is_file(YX_ROOT . '/' . ltrim($cover, '/'))) {
+                            $cover = '';
+                        }
+                        $isTpl   = YxStore::isTemplate($a);
+                        $ico     = YxStore::icon($a);
                         $author  = YxStore::authorName($a);
                         $certify = YxStore::certify($a);
                         $ownerCl = YxStore::certifyClass($a);
-                        // 版本报价：多版本取起价并加「起」，单一报价直接展示
+                        // 版本报价：全免费 → 免费；多档取起价加「起」；单一价位直接展示
                         $free    = YxStore::allFree($a);
+                        $multi   = YxStore::hasMultiPrice($a);
                         $from    = YxStore::fromPrice($a);
-                        $isFrom  = YxStore::hasMultiPrice($a);
-                        $quote   = YxStore::quote($a);
-                        [$pInt, $pDec] = store_price_parts($from !== null ? $from : ($quote['price'] ?? 0));
+                        $quotes  = YxStore::quotes($a);
+                        $pointQ  = YxStore::pointsQuote($a);
+                        $bills   = [];
+                        foreach ($quotes as $q) {
+                            $bills[(string)$q['bill_type']] = true;
+                        }
+                        $unit    = (!$free && count($bills) === 1 && isset($bills['year'])) ? '/年' : '';
+                        [$pInt, $pDec] = store_price_parts($from !== null ? $from : 0);
                         // 评分：以购买量映射 0-5 星，保证无评价数据时也有稳定展示
                         $score   = (float)$a['sales'] > 0 ? min(5, 3.5 + min(1.5, (float)$a['sales'] / 100)) : 5.0;
                         ?>
                         <li class="yx-shop-item">
                             <a class="yx-card" href="<?= e(url('store/detail.php?id=' . (int)$a['id'])) ?>">
-                                <div class="yx-card-media">
-                                    <?php if ($cover !== ''): ?>
-                                        <img src="<?= e(url($cover)) ?>" alt="<?= e($a['name']) ?>" loading="lazy">
+                                <div class="yx-card-media<?= $isTpl && $cover !== '' ? ' is-photo' : ' is-icon' ?>">
+                                    <?php if ($isTpl && $cover !== ''): ?>
+                                        <img src="<?= e(url($cover)) ?>" alt="<?= e($a['name']) ?>" loading="lazy" decoding="async">
                                     <?php else: ?>
-                                        <div class="yx-card-ico<?= $isThird ? ' is-3rd' : '' ?>"><?= e(mb_substr($a['name'], 0, 1)) ?></div>
+                                        <span class="yx-card-ico<?= $isThird ? ' is-3rd' : '' ?>" style="--ico-a:<?= e($ico['a']) ?>;--ico-b:<?= e($ico['b']) ?>">
+                                            <svg viewBox="0 0 24 24" aria-hidden="true"><?= $ico['svg'] ?></svg>
+                                        </span>
                                     <?php endif; ?>
                                 </div>
                                 <div class="yx-card-body">
@@ -265,11 +321,15 @@ $bills     = [
                                         </span>
                                         <?php if ($free || $from === null): ?>
                                             <strong class="yx-card-price is-free">免费</strong>
-                                        <?php elseif ($quote && $quote['bill_type'] === 'points'): ?>
+                                        <?php elseif ($multi): ?>
+                                            <strong class="yx-card-price" title="<?= e(YxStore::priceText($a)) ?>">
+                                                <small>¥</small><?= $pInt ?><span class="dec">.<?= $pDec ?></span><?= $unit !== '' ? '<em>' . e($unit) . '</em>' : '' ?><em>起</em>
+                                            </strong>
+                                        <?php elseif ($pointQ && count($bills) === 1): ?>
                                             <strong class="yx-card-price"><small></small><?= (int)($a['points_price'] ?? 0) ?><em>积分</em></strong>
                                         <?php else: ?>
                                             <strong class="yx-card-price">
-                                                <small>¥</small><?= $pInt ?><span class="dec">.<?= $pDec ?></span><?= $isFrom ? '<em>起</em>' : '' ?>
+                                                <small>¥</small><?= $pInt ?><span class="dec">.<?= $pDec ?></span><?= $unit !== '' ? '<em>' . e($unit) . '</em>' : '' ?>
                                             </strong>
                                         <?php endif; ?>
                                     </div>

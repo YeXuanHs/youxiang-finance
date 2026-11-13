@@ -221,9 +221,9 @@ require dirname(__DIR__) . '/includes/user_header.php';
 <div class="card">
     <div class="section-head">
         <h2>开发者中心</h2>
-        <a class="btn btn-ghost btn-sm" href="<?= e(url('store/index.php')) ?>">前往优享商店 →</a>
+        <a class="btn btn-ghost btn-sm" href="<?= e(url('user/plugin_center.php')) ?>">前往插件中心 →</a>
     </div>
-    <p class="muted">成为开发者：完成 <b>实名核验</b> 与 <b>保证金</b> 缴纳，审核通过后即可上传插件 / 主题 / 应用，经优享商店售卖。
+    <p class="muted">成为开发者：完成 <b>实名核验</b> 与 <b>保证金</b> 缴纳，审核通过后即可上传插件 / 主题 / 应用，经插件中心售卖。
         <b>模板类商品免缴保证金</b>，实名核验通过、入驻审核通过后即可上传模板。</p>
 
     <?php if (!$dev): ?>

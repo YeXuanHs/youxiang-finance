@@ -180,11 +180,11 @@ $activeMenu = 'licenses';
 require dirname(__DIR__) . '/includes/admin_header.php';
 ?>
 
-<?php if ($licMode === 'community'): ?>
+<?php if ($licMode !== 'official'): ?>
     <div class="alert alert-ok">
-        <strong>当前为开源版（community）：授权模块未启用。</strong>
-        <span>系统不会向官方接口发起授权校验，也不写入校验日志；界面统一显示「开源版 · 未启用授权模块」，
-        版本能力不受授权限制。如需按域名校验授权，请在「站务管理 → 授权模式」切回正式版。</span>
+        <strong>当前为离线授权模式：授权模块不联网校验。</strong>
+        <span>系统不会向官方接口发起授权校验，也不写入校验日志；授权结论由本地给出，
+        版本能力不受限制。如需按域名联网校验，请在「站务管理 → 授权模式」切换为正式版。</span>
     </div>
 <?php endif; ?>
 

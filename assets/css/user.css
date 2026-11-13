@@ -8,10 +8,10 @@
 
 /* ---------- 1. 设计令牌（浅色企业控制台） ---------- */
 body.user-body{
-  --uc-primary:#2468f2;
-  --uc-primary-h:#1555d8;
-  --uc-primary-soft:#edf4ff;
-  --uc-primary-line:#cddcfb;
+  --uc-primary:#3b5bfd;
+  --uc-primary-h:#2a45e0;
+  --uc-primary-soft:#eef1ff;
+  --uc-primary-line:#d5dcff;
   --uc-text:#1f2329;
   --uc-text-2:#646a73;
   --uc-text-3:#8a9099;
@@ -27,10 +27,10 @@ body.user-body{
   --uc-shadow:0 1px 2px rgba(31,35,41,.04);
 
   /* 覆盖 style.css 中墨青令牌，使用户中心其余页面统一走蓝色系 */
-  --primary:#2468f2;
-  --primary-d:#1555d8;
-  --primary-soft:rgba(36,104,242,.10);
-  --primary-grad:#2468f2;
+  --primary:#3b5bfd;
+  --primary-d:#2a45e0;
+  --primary-soft:rgba(59,91,253,.10);
+  --primary-grad:#3b5bfd;
   --bg:var(--uc-page);
   --panel:#fff;
   --ink:var(--uc-text);
@@ -238,7 +238,7 @@ body.user-body .stat:hover{transform:none;box-shadow:var(--uc-shadow);border-col
 body.user-body .stat span{color:var(--uc-text-3);font-size:12px;margin-bottom:6px}
 body.user-body .stat strong{font-size:24px;font-weight:700;letter-spacing:-.5px;font-family:inherit}
 body.user-body .stat small{color:var(--uc-text-3);font-size:11.5px}
-body.user-body .stat.accent{background:linear-gradient(135deg,#2468f2,#4b86ff);border-color:transparent}
+body.user-body .stat.accent{background:linear-gradient(135deg,#3b5bfd,#6d86ff);border-color:transparent}
 body.user-body .stat.accent span,body.user-body .stat.accent small{color:rgba(255,255,255,.82)}
 body.user-body .stat.accent strong{color:#fff}
 
@@ -291,7 +291,7 @@ body.user-body select,body.user-body textarea{
 }
 body.user-body input::placeholder,body.user-body textarea::placeholder{color:#aeb6c2}
 body.user-body input:focus,body.user-body select:focus,body.user-body textarea:focus{
-  outline:none;border-color:var(--uc-primary);box-shadow:0 0 0 3px rgba(36,104,242,.12);
+  outline:none;border-color:var(--uc-primary);box-shadow:0 0 0 3px rgba(59,91,253,.12);
 }
 body.user-body :focus-visible{outline:2px solid var(--uc-primary);outline-offset:1px}
 body.user-body label.checkbox{display:flex;align-items:center;gap:8px;margin-top:0}
@@ -373,7 +373,7 @@ body.user-body .badge-info{background:var(--uc-primary-soft);color:var(--uc-prim
 body.user-body .badge-mute{background:#eef1f5;color:#5d6570}
 body.user-body .badge-off{background:#f2f4f8;color:#8a9099}
 body.user-body .badge-lg{font-size:13px;padding:5px 13px;border-radius:999px}
-body.user-body .badge-edition{color:#fff;background:var(--c,#2468f2)}
+body.user-body .badge-edition{color:#fff;background:var(--c,#3b5bfd)}
 
 /* style.css 给 .alert 加了左右 gutter 外边距，只能贴合 <main> 直出；卡片内的提示会溢出卡片 */
 body.user-body .alert{
@@ -425,7 +425,7 @@ body.user-body .pager .disabled{opacity:.5}
 /* 欢迎横幅：左问候+资产，右快捷额度信息 */
 .uc-hero{
   position:relative;overflow:hidden;border-radius:10px;padding:26px 28px;
-  background:linear-gradient(120deg,#1a56d6 0%,#2468f2 52%,#4b86ff 100%);
+  background:linear-gradient(120deg,#2a45e0 0%,#3b5bfd 52%,#6d86ff 100%);
   color:#fff;display:flex;justify-content:space-between;gap:26px;flex-wrap:wrap;
 }
 .uc-hero:after{
@@ -490,7 +490,7 @@ body.user-body .pager .disabled{opacity:.5}
   border:1px solid var(--uc-line);border-radius:8px;box-shadow:var(--uc-shadow);
   color:var(--uc-text);transition:border-color .16s ease,box-shadow .16s ease;
 }
-.uc-metric:hover{border-color:var(--uc-primary-line);box-shadow:0 6px 18px rgba(36,104,242,.08)}
+.uc-metric:hover{border-color:var(--uc-primary-line);box-shadow:0 6px 18px rgba(59,91,253,.08)}
 .uc-metric-ico{
   width:40px;height:40px;flex:0 0 40px;border-radius:9px;display:grid;place-items:center;
   background:var(--uc-primary-soft);color:var(--uc-primary);
@@ -978,4 +978,59 @@ body.user-body .yx-bar{
 body.user-body .yx-bar>i{
   display:block;height:100%;border-radius:99px;background:var(--uc-primary);
   transition:width .3s ease;
+}
+
+/* ==========================================================================
+   16. 合作伙伴 · 服务网络（user/partners.php）
+   内容由后台「合作伙伴」维护，前台只读展示。
+   ========================================================================== */
+body.user-body .uc-page-head-txt{min-width:0}
+body.user-body .uc-page-head-txt p{margin:7px 0 0;font-size:12.5px;line-height:1.7;color:var(--uc-text-3)}
+
+.uc-partner-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;
+}
+.uc-partner-card{
+  display:flex;flex-direction:column;min-width:0;
+  padding:18px;background:#fff;border:1px solid var(--uc-line);border-radius:8px;
+  transition:border-color .16s ease,box-shadow .16s ease;
+}
+.uc-partner-card:hover{border-color:var(--uc-primary-line);box-shadow:0 6px 18px rgba(59,91,253,.07)}
+.uc-partner-logo{
+  display:flex;align-items:center;justify-content:flex-start;
+  height:56px;margin-bottom:14px;
+}
+.uc-partner-logo img{max-width:100%;max-height:56px;width:auto;object-fit:contain}
+.uc-partner-logo.is-text span{
+  display:grid;place-items:center;width:48px;height:48px;border-radius:10px;
+  background:var(--uc-primary-soft);color:var(--uc-primary);
+  font-size:19px;font-weight:650;line-height:1;
+}
+.uc-partner-card h3{
+  margin:0;font-size:14.5px;font-weight:650;line-height:1.5;color:var(--uc-text);
+  overflow-wrap:anywhere;
+}
+.uc-partner-card p{
+  flex:1;margin:7px 0 0;font-size:12.5px;line-height:1.75;color:var(--uc-text-2);
+  overflow-wrap:anywhere;
+}
+.uc-partner-link{
+  display:inline-flex;align-items:center;gap:4px;margin-top:14px;
+  font-size:12.5px;font-weight:550;color:var(--uc-primary);
+}
+.uc-partner-link:hover{color:var(--uc-primary-h);text-decoration:underline;text-underline-offset:3px}
+
+.uc-partner-empty{padding:34px 18px;text-align:center}
+.uc-partner-empty-ico{
+  display:grid;place-items:center;width:54px;height:54px;margin:0 auto 14px;
+  border-radius:50%;background:var(--uc-primary-soft);color:var(--uc-primary);
+  font-size:22px;line-height:1;
+}
+.uc-partner-empty h2{margin:0 0 6px;font-size:15px;font-weight:650;color:var(--uc-text)}
+.uc-partner-empty p{margin:0 0 16px;font-size:12.5px;color:var(--uc-text-3)}
+.uc-partner-empty .btn{display:inline-flex}
+
+@media (max-width:560px){
+  .uc-partner-grid{grid-template-columns:1fr;gap:10px}
+  .uc-partner-card{padding:16px}
 }

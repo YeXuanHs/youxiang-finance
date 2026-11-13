@@ -98,13 +98,15 @@ require dirname(__DIR__) . '/includes/user_header.php';
     </p>
     <p class="muted small">购买后本页解锁：我的等级、加价试算、加价明细、上游对接自检。</p>
     <div class="alert alert-warn">尚未购买该插件，当前显示为购买入口。</div>
-    <form method="post" action="<?= e(url('user/app_redeem.php')) ?>" class="inline-form">
+    <form method="post" action="<?= e(url('user/purchase.php')) ?>" class="inline-form">
         <?= csrf_field() ?>
+        <input type="hidden" name="kind" value="app">
         <input type="hidden" name="app_id" value="<?= (int)$app['id'] ?>">
+        <input type="hidden" name="edition" value="<?= e(YxBusiness::appEdition($app)) ?>">
         <label>绑定域名
             <input type="text" name="domain" required placeholder="例如 www.example.com" value="<?= e(current_domain()) ?>">
         </label>
-        <button class="btn btn-primary" type="submit">购买插件（<?= e(YxBusiness::priceLabel($app)) ?>）</button>
+        <button class="btn btn-primary" type="submit">购买插件（<?= e(YxStore::priceText($app)) ?>）</button>
         <a class="btn" href="<?= e(url('store/detail.php?id=' . (int)$app['id'])) ?>">查看详情</a>
     </form>
 </div>

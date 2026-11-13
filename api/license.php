@@ -28,6 +28,33 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
 
 $domain = normalize_domain((string)($_REQUEST['domain'] ?? ''));
 
+/* ------------------------------------------------------------------ */
+/* 安装授权码在线复核                                                   */
+/*                                                                     */
+/* 发行包不再携带可用于签发/离线校验的密钥，安装向导第 4 步改为向本接口 */
+/* 提交 domain + product + code。授权码本身即凭证（由产品密钥对「产品+   */
+/* 域名」签名），因此不需要 app_id；接口按 IP 限流、失败达阈值即锁定并  */
+/* 触发安全告警。不返回任何可用于推算正确授权码的信息。                 */
+/* ------------------------------------------------------------------ */
+if (strtolower(trim((string)($_REQUEST['action'] ?? ''))) === 'pkg_verify') {
+    $res  = YxLicense::servePkgVerify($_REQUEST);
+    $code = (int)($res['code'] ?? 0);
+    json_out($res, $code === 0 ? 200 : ($code >= 400 ? $code : 200));
+}
+
+/* ------------------------------------------------------------------ */
+/* 签名授权文件在线复核（Ed25519 公钥验签）                             */
+/*                                                                     */
+/* 与 pkg_verify 的区别：不使用产品密钥，只验发行包内公开的公钥，因此   */
+/* 不构成签发预言机。买家站点在线确认「拿到的授权文件确为授权中心签发」。 */
+/* 参数：domain + product + license（JSON 字符串或对象）。              */
+/* ------------------------------------------------------------------ */
+if (strtolower(trim((string)($_REQUEST['action'] ?? ''))) === 'pkg_sig_verify') {
+    $res  = YxLicense::servePkgSigVerify($_REQUEST);
+    $code = (int)($res['code'] ?? 0);
+    json_out($res, $code === 0 ? 200 : ($code >= 400 ? $code : 200));
+}
+
 // 授权中心尚未启用任何授权ID：说明本机不是授权中心，拒绝对外提供查询
 $hasApp = false;
 try {

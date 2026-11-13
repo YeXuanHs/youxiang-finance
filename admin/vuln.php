@@ -40,7 +40,7 @@ require dirname(__DIR__) . '/includes/admin_header.php';
         <?php foreach ($rows as $v): ?>
             <tr>
                 <td class="mono small"><?= e($v['sn']) ?></td>
-                <td class="wrap"><?= e($v['title']) ?><br><span class="muted small"><?= e(mb_substr((string)$v['description'], 0, 60)) ?></span></td>
+                <td class="wrap"><?= e($v['title']) ?> <?= YxDispute::badge($v) ?><br><span class="muted small"><?= e(mb_substr((string)$v['description'], 0, 60)) ?></span></td>
                 <td class="small"><?= e($v['asset_type']) ?><?php if ($v['target']): ?><br><span class="mono"><?= e($v['target']) ?></span><?php endif; ?></td>
                 <td><span class="badge <?= e($sevCls[$v['severity']] ?? 'badge-mute') ?>"><?= e($SEVERITY[$v['severity']] ?? $v['severity']) ?></span></td>
                 <td class="small"><?= e($v['reporter']) ?><br><?= e($v['contact']) ?></td>
@@ -48,6 +48,7 @@ require dirname(__DIR__) . '/includes/admin_header.php';
                 <td class="small muted"><?= e($v['created_at']) ?></td>
                 <td>
                     <details><summary style="cursor:pointer;color:var(--primary)">详情/处理</summary>
+                        <?= YxDispute::adminPanel($v) ?>
                         <?php if ($v['poc']): ?><pre class="mono small" style="white-space:pre-wrap;background:#f6f8fc;padding:8px;border-radius:6px"><?= e($v['poc']) ?></pre><?php endif; ?>
                         <form method="post" class="inline-form mt-2">
                             <?= csrf_field() ?><input type="hidden" name="action" value="handle"><input type="hidden" name="id" value="<?= (int)$v['id'] ?>">

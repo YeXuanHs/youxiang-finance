@@ -400,7 +400,6 @@ require dirname(__DIR__) . '/includes/user_header.php';
                     <a href="<?= e(url('user/recharge.php')) ?>"><i><?= yx_icon('wallet', 16) ?></i>余额充值</a>
                     <a href="<?= e(url('user/orders.php')) ?>"><i><?= yx_icon('bill', 16) ?></i>我的订单</a>
                     <a href="<?= e(url('user/licenses.php')) ?>"><i><?= yx_icon('key', 16) ?></i>我的授权</a>
-                    <a href="<?= e(url('store/index.php')) ?>"><i><?= yx_icon('store', 16) ?></i>应用商店</a>
                     <a href="<?= e(url('user/profile.php')) ?>"><i><?= yx_icon('user', 16) ?></i>资料设置</a>
                     <a href="<?= e(url('user/checkin.php')) ?>"><i><?= yx_icon('check', 16) ?></i>每日签到</a>
                 </div>

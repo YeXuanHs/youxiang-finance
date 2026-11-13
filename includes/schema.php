@@ -193,6 +193,8 @@ return [
             'status'      => "varchar(20):default=unpaid",
             'pay_method'  => 'varchar(20):null',
             'trade_no'    => 'varchar(80):null',
+            'app_edition' => 'varchar(20):null',        // 商店应用下单时选中的授权版本（basic/pro/enterprise）
+            'app_bill_type' => 'varchar(20):null',      // 商店应用下单时的实际计费方式快照
             'coupon_id'   => 'int:default=0',
             'agent_id'    => 'int:default=0',
             'subsite_id'  => 'int:default=0',
@@ -304,6 +306,8 @@ return [
             'priority'    => "varchar(20):default=normal",
             'status'      => "varchar(20):default=open",
             'admin_id'    => 'int:default=0',
+            'manual_only' => 'tinyint:default=0',          // 1 = 报案/涉警类诉求，仅人工办理
+            'manual_note' => 'varchar(255):null',          // 命中判定依据（关键词）
             'reply_count' => 'int:default=0',
             'created_at'  => 'datetime:null',
             'updated_at'  => 'datetime:null',
@@ -388,6 +392,9 @@ return [
             'customer_id'  => 'int:default=0',
             'domain'       => 'varchar(120):null',
             'license_key'  => 'varchar(80):null',
+            'edition'      => "varchar(20):default=basic",  // 实际购买的授权版本
+            'bill_type'    => "varchar(20):default=once",   // 实际计费方式（free/once/year/points）
+            'price'        => 'decimal(12,2):default=0',    // 该域名授权的成交价
             'order_id'     => 'int:default=0',
             'status'       => "varchar(20):default=enabled",
             'expire_at'    => 'date:null',
@@ -550,6 +557,39 @@ return [
             'created_at' => 'datetime:null',
         ],
         'indexes' => [['section'], ['sort'], ['status']],
+    ],
+
+    /* ---------------- 合作伙伴 / 服务网络（用户中心展示，后台可维护） ---------------- */
+    'partner' => [
+        'comment' => '合作伙伴 · 服务网络（用户中心展示，后台可编辑文字与图片）',
+        'columns' => [
+            'id'          => 'int:pk:ai',
+            'name'        => 'varchar(120)',
+            'logo'        => 'varchar(255):null',   // 相对 uploads/ 的图片路径
+            'description' => 'text:null',
+            'url'         => 'varchar(255):null',   // 可选的机构链接
+            'sort'        => 'int:default=0',
+            'status'      => 'tinyint:default=1',
+            'created_at'  => 'datetime:null',
+            'updated_at'  => 'datetime:null',
+        ],
+        'indexes' => [['status'], ['sort']],
+    ],
+
+    /* ---------------- 服务条款 / 隐私政策（后台可编辑，注册页链接指向） ---------------- */
+    'legal_doc' => [
+        'comment' => '服务条款与隐私政策（slot 唯一，后台编辑标题、生效日期与正文）',
+        'columns' => [
+            'id'             => 'int:pk:ai',
+            'slot'           => 'varchar(20)',            // terms | privacy
+            'title'          => 'varchar(120):null',
+            'version'        => 'varchar(20):null',
+            'effective_date' => 'date:null',
+            'content'        => 'text:null',
+            'created_at'     => 'datetime:null',
+            'updated_at'     => 'datetime:null',
+        ],
+        'indexes' => [['slot']],
     ],
 
     /* ---------------- 首页横幅（后台可编辑图片与文案） ---------------- */
@@ -952,12 +992,68 @@ return [
             'detect_result' => 'json:null',
             'status'        => "varchar(20):default=pending", // pending|accepted|rejected|takedown|closed
             'handle_note'   => 'varchar(255):null',
+            'manual_only'   => 'tinyint:default=0',          // 1 = 报案/涉警类诉求，仅人工办理
+            'manual_note'   => 'varchar(255):null',          // 命中判定依据（关键词）
+            'kind'          => "varchar(20):default=report", // report 举报单 | infringe 侵权判定待审件
+            'evidence'      => 'json:null',                  // 证据固化快照（域名比对结论、校验日志、包指纹、举报原文）
+            'demand'        => 'varchar(40):null',           // 处置诉求：purchase_license|takedown|legal_draft
+            'review_status' => "varchar(20):default=none",   // none|pending|approved|rejected（法务复核，仅人工）
+            'reviewer'      => 'varchar(80):null',           // 法务复核人（人工填写，系统不自动填）
             'handled_by'    => 'int:default=0',
             'created_at'    => 'datetime:null',
             'updated_at'    => 'datetime:null',
             'handled_at'    => 'datetime:null',
         ],
         'indexes' => [['customer_id'], ['status'], ['target_app_id'], ['created_at']],
+    ],
+
+    /* ---------------- 律师函（人工起草 / AI 辅助，法务复核后签发） ---------------- */
+    'law_letter' => [
+        'comment' => '律师函（人工编辑 + AI 辅助生成，法务复核通过后加盖电子印章签发）',
+        'columns' => [
+            'id'               => 'int:pk:ai',
+            'sn'               => 'varchar(40):unique',              // 函件编号
+            'report_id'        => 'int:default=0',                   // 关联侵权待审件 id（0=独立起草）
+            'report_sn'        => 'varchar(40):null',
+            'title'            => 'varchar(180)',                    // 内部标题 / 事由
+            'recipient'        => 'varchar(180):null',               // 收函单位
+            'recipient_domain' => 'varchar(120):null',               // 收函方域名
+            'subject'          => 'varchar(255):null',               // 函件主题
+            'facts'            => 'json:null',                       // 事实要素（结构化，供 AI 与模板共用）
+            'content'          => 'text:null',                       // 正文（人工可编辑，签发以本字段为准）
+            'content_source'   => "varchar(20):default=manual",      // manual|ai|ai_polish|template
+            'ai_model'         => 'varchar(80):null',                // 生成引擎标识
+            'ai_note'          => 'varchar(255):null',               // 生成引擎说明（页面如实展示）
+            'status'           => "varchar(20):default=draft",       // draft|pending|approved|rejected|issued|void
+            'drafter'          => 'varchar(80):null',                // 起草人（人工署名）
+            'reviewer'         => 'varchar(80):null',                // 法务复核人（人工署名）
+            'review_note'      => 'varchar(255):null',
+            'reviewed_at'      => 'datetime:null',
+            'issuer'           => 'varchar(120):null',               // 签发 / 盖章主体
+            'seal_date'        => 'date:null',                       // 印章日期
+            'seal_hash'        => 'varchar(64):null',                // 签发内容摘要（防篡改核验）
+            'issued_at'        => 'datetime:null',
+            'issued_by'        => 'int:default=0',
+            'created_by'       => 'int:default=0',
+            'created_at'       => 'datetime:null',
+            'updated_at'       => 'datetime:null',
+        ],
+        'indexes' => [['status'], ['report_id'], ['created_at']],
+    ],
+
+    'law_letter_log' => [
+        'comment' => '律师函流程留痕（起草 / AI 生成 / 提交 / 复核 / 签发）',
+        'columns' => [
+            'id'         => 'int:pk:ai',
+            'letter_id'  => 'int:default=0',
+            'letter_sn'  => 'varchar(40):null',
+            'action'     => 'varchar(40)',                    // create|save|ai_generate|ai_polish|submit|review|issue
+            'operator'   => 'varchar(80):null',
+            'admin_id'   => 'int:default=0',
+            'note'       => 'varchar(255):null',
+            'created_at' => 'datetime:null',
+        ],
+        'indexes' => [['letter_id'], ['action'], ['created_at']],
     ],
 
     'infringe_scan' => [
@@ -991,6 +1087,8 @@ return [
             'poc'         => 'text:null',
             'status'      => "varchar(20):default=pending",   // pending|accepted|fixing|fixed|rejected
             'handle_note' => 'varchar(255):null',
+            'manual_only' => 'tinyint:default=0',             // 1 = 报案/涉警类诉求，仅人工办理
+            'manual_note' => 'varchar(255):null',             // 命中判定依据（关键词）
             'handled_by'  => 'int:default=0',
             'created_at'  => 'datetime:null',
             'updated_at'  => 'datetime:null',
@@ -1081,6 +1179,8 @@ return [
             'status'      => "varchar(20):default=pending", // pending|accepted|processing|rejected|closed
             'admin_id'    => 'int:default=0',
             'handle_note' => 'varchar(255):null',
+            'manual_only' => 'tinyint:default=0',          // 1 = 报案/涉警类诉求，仅人工办理
+            'manual_note' => 'varchar(255):null',          // 命中判定依据（关键词）
             'reply_count' => 'int:default=0',
             'created_at'  => 'datetime:null',
             'updated_at'  => 'datetime:null',

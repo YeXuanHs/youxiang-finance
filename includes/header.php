@@ -40,7 +40,6 @@ $siteName = setting('site_name', config('app.name'));
         <div class="zd-topbar-links">
             <a href="<?= e(url('report.php')) ?>">工单举报</a>
             <a href="<?= e(url('infringe.php')) ?>">版权侵权</a>
-            <?php if ($meCust): ?><a href="<?= e(url('panel/index.php')) ?>">用户后台</a><?php endif; ?>
         </div>
     </div>
 </div>
@@ -71,8 +70,7 @@ $siteName = setting('site_name', config('app.name'));
                 <b><?= e($licenseBadgePublic['icon']) ?></b> <?= e($licenseBadgePublic['text']) ?>
             </a>
             <?php if ($meCust): ?>
-                <a class="btn btn-ghost btn-sm" href="<?= e(url('user/index.php')) ?>">用户中心</a>
-                <a class="btn btn-primary btn-sm" href="<?= e(url('panel/index.php')) ?>">用户后台</a>
+                <a class="btn btn-primary btn-sm" href="<?= e(url('user/index.php')) ?>">用户中心</a>
             <?php else: ?>
                 <a class="btn btn-ghost btn-sm" href="<?= e(url('user/login.php')) ?>">登录</a>
                 <a class="btn btn-primary btn-sm" href="<?= e(url('user/register.php')) ?>">免费注册</a>

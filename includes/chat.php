@@ -148,6 +148,14 @@ class YxChat
         $history = self::aiHistory($sid); // 先取历史，避免与当前问题重复
         self::addMessage($sid, 'visitor', $content);
 
+        // 报案 / 涉警类诉求：AI 不代答、不定性，直接给出导办口径并转人工
+        if ($session['status'] === 'ai' && YxDispute::inspect($content)['hit']) {
+            $n = YxDispute::NOTICE;
+            self::addMessage($sid, 'system', $n['title'] . '：' . $n['body'] . ' ' . implode(' ', $n['steps']));
+            self::transfer($session, '报案类诉求，仅人工办理');
+            return ['ok' => true, 'msg' => '已发送', 'manual_only' => true];
+        }
+
         if ($session['status'] === 'ai') {
             if (!YxAi::enabled()) {
                 self::addMessage($sid, 'system', '小优助手暂未开启，请点击「转人工」联系客服。');
@@ -223,6 +231,13 @@ class YxChat
             $lines[] = $reason !== '' ? ('—— ' . $reason) : '—— 客户请求转人工';
             YxBusiness::replyTicket($ticketId, 'customer', (int)$session['customer_id'], implode("\n", $lines));
             $patch['ticket_id'] = $ticketId;
+            // 报案类诉求：工单建好后补标记「仅人工办理」，后台工单列表可见
+            if (YxDispute::inspect($reason, implode("\n", $lines))['hit']) {
+                YxDb::exec(
+                    'UPDATE ' . YxDb::table('ticket') . ' SET manual_only = 1, manual_note = ?, priority = ?, updated_at = ? WHERE id = ?',
+                    [mb_substr($reason !== '' ? $reason : YxDispute::TYPE_TITLE, 0, 255), 'urgent', now(), $ticketId]
+                );
+            }
         }
 
         YxDb::update('chat_session', $patch, 'id = :id', ['id' => $sid]);

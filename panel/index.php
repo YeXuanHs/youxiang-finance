@@ -158,6 +158,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($title === '' || $desc === '') {
             $res = ['ok' => false, 'msg' => '请填写漏洞标题与详细说明'];
         } else {
+            // 报案 / 涉警类诉求：仍登记，但标记「仅人工办理」，不进入自助受理与自动答复
+            $dispute = YxDispute::inspect($title, $desc);
             YxDb::insert('vuln_report', [
                 'sn' => make_sn('VUL', 'vuln_report'), 'customer_id' => $cid,
                 'reporter' => $customer['username'], 'contact' => trim((string)($_POST['contact'] ?? $customer['email'])),
@@ -166,9 +168,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'target' => trim((string)($_POST['target'] ?? '')),
                 'severity' => in_array($_POST['severity'] ?? '', ['low', 'mid', 'high', 'critical'], true) ? $_POST['severity'] : 'mid',
                 'description' => $desc, 'poc' => trim((string)($_POST['poc'] ?? '')),
+                'manual_only' => $dispute['hit'] ? 1 : 0,
+                'manual_note' => $dispute['hit'] ? mb_substr('命中：' . implode('、', $dispute['keywords']), 0, 255) : null,
                 'status' => 'pending', 'created_at' => now(), 'updated_at' => now(),
             ]);
-            $res  = ['ok' => true, 'msg' => '漏洞已提交，感谢反馈'];
+            $res  = ['ok' => true, 'msg' => $dispute['hit'] ? '已登记，编号已生成。该诉求属报案 / 涉警类，仅人工办理，客服将通过工单与您联系' : '漏洞已提交，感谢反馈'];
             $back = 'vuln';
         }
     }
@@ -463,6 +467,7 @@ if ($payOrder && $payOrder['status'] === 'unpaid'):
 <?php elseif ($m === 'vuln'): ?>
     <div class="card">
         <h2>漏洞提交</h2>
+        <?= YxDispute::noticeHtml() ?>
         <form method="post"><?= csrf_field() ?><input type="hidden" name="do" value="vuln_submit">
             <div class="grid-3">
                 <label>漏洞标题 <input type="text" name="title" required></label>

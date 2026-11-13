@@ -64,60 +64,36 @@ if ($kind === 'product') {
 
 if ($kind === 'app') {
     $appId  = (int)($_POST['app_id'] ?? 0);
-    $domain = normalize_domain((string)($_POST['domain'] ?? ''));
     $app    = YxDb::one('SELECT * FROM ' . YxDb::table('app') . " WHERE id = ? AND status = 'on'", [$appId]);
+    $back   = url('store/detail.php?id=' . $appId);
 
     if (!$app) {
         flash('应用不存在或已下架', 'error');
         redirect(url('store/index.php'));
     }
-    if (YxEdition::rank() < YxEdition::rank($app['edition_min'])) {
-        flash('该应用需要「' . YxEdition::name($app['edition_min']) . '」及以上版本', 'error');
-        redirect(url('store/detail.php?id=' . $appId));
-    }
-    if ($domain === '') {
-        flash('请填写要绑定的域名（授权码按域名签发）', 'error');
-        redirect(url('store/detail.php?id=' . $appId));
-    }
 
-    // 应用设置（可选加价项）
-    $specName = trim((string)($_POST['spec'] ?? ''));
-    $q        = class_exists('YxServiceCenter') ? YxServiceCenter::appQuote($app, $specName) : ['amount' => (float)$app['price'], 'spec' => null];
-    $price    = round_money($q['amount']);
-    $specTxt  = $q['spec'] ? (string)$q['spec']['name'] : '';
-    $name     = $app['name'] . ' @ ' . $domain . ($specTxt !== '' ? ' · ' . $specTxt : '');
-
-    if ($price <= 0) {
-        // 免费应用直接安装
-        if (!YxEdition::can('store.buy')) {
-            flash('当前版本不支持一键安装，请升级到「普惠版」及以上版本', 'error');
-            redirect(url('store/detail.php?id=' . $appId));
-        }
-        $res = YxBusiness::installApp(['app_id' => $appId, 'customer_id' => $cid, 'domain' => $domain]);
-        log_action('app.install_free', $app['key'], ['domain' => $domain, 'ok' => $res['ok']]);
-        // 只有安装成功（权益已落库、本人即持有者）才回显授权码；失败时不要拼空码。
-        $flashMsg = $res['msg'];
-        if (!empty($res['ok']) && (string)($res['license_key'] ?? '') !== '') {
-            $flashMsg .= '，授权码：' . $res['license_key'];
-        }
-        flash($flashMsg, $res['ok'] ? 'success' : 'error');
-        redirect(url('user/licenses.php'));
-    }
-
-    $created = YxBusiness::createOrder([
-        'customer_id' => $cid,
-        'type'        => 'app',
-        'app_id'      => $appId,
-        'name'        => $domain,
-        'amount'      => $price,
-        'note'        => '应用购买：' . $app['name'] . ($specTxt !== '' ? ' · 设置：' . $specTxt : ''),
+    // 与 user/app_redeem.php 共用同一结算入口，免费 / 积分 / 按年 / 升级规则不分叉
+    $res = YxStore::checkout($app, $cid, [
+        'domain'  => (string)($_POST['domain'] ?? ''),
+        'edition' => (string)($_POST['edition'] ?? ''),
+        'spec'    => (string)($_POST['spec'] ?? ''),
     ]);
-    if (!$created['ok']) {
-        flash($created['msg'], 'error');
-        redirect(url('store/detail.php?id=' . $appId));
+    if (empty($res['ok'])) {
+        flash((string)($res['msg'] ?? '操作失败'), 'error');
+        redirect($back);
     }
-    flash('订单已创建（' . $name . '），请完成支付');
-    redirect(url('user/orders.php?pay=' . (int)$created['order_id']));
+
+    if (!empty($res['order_id'])) {
+        flash((string)$res['msg']);
+        redirect(url('user/orders.php?pay=' . (int)$res['order_id']));
+    }
+
+    $msg = (string)$res['msg'];
+    if ((string)($res['license_key'] ?? '') !== '') {
+        $msg .= '，授权码：' . $res['license_key'];
+    }
+    flash($msg);
+    redirect((string)($app['author_type'] ?? '') === 'thirdparty' ? $back : url('user/licenses.php'));
 }
 
 flash('未知的下单类型', 'error');

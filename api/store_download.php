@@ -4,9 +4,10 @@
  *
  * 支持两类：
  *  1) 第三方资源（author_type=thirdparty）：按权益（已购买/兑换）放行，仅供下载。
- *  2) 官方主程序包（author_type=official，type=package）：程序包本体免费下载——
- *     只需登录，不校验购买/授权；授权包（安装授权码）在商店另行按次付费购买，
- *     与程序包下载解耦。下载入口只有本文件，uploads/license 已禁止直链。
+ *  2) 官方主程序包（author_type=official，type=package）：只有开源版（open）
+ *     登录即可免费下载；正版程序包（program，88 元/次）与安装授权包（license，
+ *     含按域名签发的安装授权码）购买后方可下载。下载入口只有本文件，
+ *     uploads/license 已禁止直链。
  *
  * 传输：支持 HTTP Range（断点续传 / 分段下载），任何输出缓冲与超时限制都不影响大文件；
  *       Range 首发（或整包）才计一次下载量，续传不重复计数。
@@ -41,15 +42,27 @@ if (!$app || (!$isThirdParty && !$isOfficialPkg)) {
     $fail(404, '资源不存在或不可下载');
 }
 
-/* 权益校验：第三方资源仍按购买/兑换放行；官方程序包免费，只需登录 */
-if (!$isOfficialPkg && YxBusiness::billType($app) !== 'free') {
-    $cust = YxAuth::customer();
-    $ent  = $cust ? YxBusiness::entitlement((int)$app['id'], (int)$cust['id']) : null;
-    if (!$ent) {
-        $fail(403, $cust ? '该资源需购买或兑换后方可下载' : '请先登录后下载');
+/*
+ * 权益校验：
+ *   - 开源版：登录即可下载；
+ *   - 正版程序包 / 安装授权包：必须已购买（下载权益或已支付订单）方可下载，
+ *     正版程序包不再因为 price 残留或 SKU 判定被放成免费下载；
+ *   - 第三方资源：需已购买/兑换；免费计费的第三方资源登录即可。
+ */
+$cust = YxAuth::customer();
+if (!$cust) {
+    $fail(403, $isOfficialPkg && YxStore::packageFree($app)
+        ? '请先登录后免费下载开源版'
+        : '请先登录后下载');
+}
+if ($isOfficialPkg && !YxStore::packageFree($app)) {
+    if (!YxStore::hasPurchased($app, (int)$cust['id'])) {
+        $fail(403, '该程序包需购买后方可下载，请先在详情页完成购买');
     }
-} elseif ($isOfficialPkg && !YxAuth::customer()) {
-    $fail(403, '请先登录后免费下载程序包');
+} elseif (!$isOfficialPkg && YxBusiness::billType($app) !== 'free') {
+    if (!YxBusiness::entitlement((int)$app['id'], (int)$cust['id'])) {
+        $fail(403, '该资源需购买或兑换后方可下载');
+    }
 }
 
 $rel = (string)($app['package_path'] ?? '');
@@ -69,9 +82,13 @@ if ($size <= 0) {
 }
 
 /* ---------- 文件名 ---------- */
+/* 发行包（正版程序包/开源 .zip、安装授权包 .zip.enc 等）必须原样保留后缀，否则用户拿到手的文件名与实际格式不符 */
 $ext  = '.tar.gz';
 $raw  = (string)($app['package_path'] ?? '');
-if (strtolower(substr($raw, -4)) === '.zip') {
+if (strtolower(substr($raw, -4)) === '.enc') {
+    // 取「已知压缩后缀 + .enc」，避免把文件名里的版本号当成后缀
+    $ext = preg_match('#(\.(?:tar\.gz|tgz|zip|rar|7z|tar)\.enc)$#i', $raw, $m) ? strtolower($m[1]) : '.tar.gz.enc';
+} elseif (strtolower(substr($raw, -4)) === '.zip') {
     $ext = '.zip';
 } elseif (strtolower(substr($raw, -4)) === '.tgz') {
     $ext = '.tgz';

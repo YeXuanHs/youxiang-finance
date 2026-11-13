@@ -194,7 +194,7 @@ require __DIR__ . '/includes/header.php';
             <li>本页为官方展示位，卡片中的价格与购买入口以后台「版本与模块」的实时配置为准。</li>
             <li>授权以域名为单位签发，购买后在「我的授权」中查看授权码与到期时间。</li>
             <li>如需了解具体功能差异，可在
-                <a href="<?= e(url('index.php#editions')) ?>">版本对比</a> 与
+                <a href="<?= e(url('goods.php?fpg_id=' . $fpg)) ?>">版本套餐</a> 与
                 <a href="<?= e(url('docs/')) ?>">安装教程</a> 中查看。
             </li>
         </ul>

@@ -315,7 +315,6 @@ $joinOpen     = YxCareer::openForApply();
             <p class="muted">产品咨询、方案沟通或售后问题，都可以直接提交工单，我们会尽快回复。</p>
             <div class="form-actions">
                 <a class="btn btn-primary" href="<?= e(url('user/tickets.php')) ?>">提交工单</a>
-                <a class="btn btn-ghost" href="<?= e(url('store/index.php')) ?>">应用商店</a>
             </div>
         </div>
     </div>

@@ -476,24 +476,21 @@ require dirname(__DIR__) . '/includes/admin_header.php';
             <?php $licMode = YxLicense::mode(); $modeLocked = YxLicense::modeLocked(); ?>
             <?php if ($modeLocked): ?>
                 <label>授权模式
-                    <input type="text" readonly value="开源版（community）—— 已锁定，不可切换正式版">
+                    <input type="text" readonly value="已锁定，不可切换">
                 </label>
                 <p class="muted small" style="margin-top:-6px">
-                    本站点运行的是<strong>开源版发行包</strong>，授权模式在发行包内固定为开源版：
-                    不联网校验授权、不写校验日志、不做版本收敛，界面显示「开源版 · 未启用授权模块」。
-                    <strong>后台不提供切换正式版的入口</strong>，伪造请求提交正式版也会被拒绝；
-                    如需正式版，请另行安装正版主程序包。
+                    本站点的授权模式已在配置中固定，后台不提供切换入口。
                 </p>
             <?php else: ?>
                 <label>授权模式
                     <select name="license_mode">
                         <option value="official" <?= $licMode === 'official' ? 'selected' : '' ?>>正式版（official）—— 按域名校验授权，展示正版 / 未授权结论</option>
-                        <option value="community" <?= $licMode === 'community' ? 'selected' : '' ?>>开源版（community）—— 不启用授权模块，界面标注「开源版」</option>
+                        <option value="community" <?= $licMode === 'community' ? 'selected' : '' ?>>离线模式（community）—— 本地给出授权结论，不联网</option>
                     </select>
                 </label>
                 <p class="muted small" style="margin-top:-6px">
-                    开源版会整体关闭授权校验：不联网查询、不写校验日志、不做版本收敛，界面显示「开源版 · 未启用授权模块」。
-                    该模式用于分发免费/开源版本，<strong>不会把未授权站点显示为「已正版授权」</strong>。
+                    离线模式不联网查询、不写校验日志、不做版本收敛，授权结论完全由本地给出。
+                    如需按域名向授权中心校验，请选择正式版。
                 </p>
             <?php endif; ?>
             <?php $credReady = YxLicense::hasCredentials(); ?>

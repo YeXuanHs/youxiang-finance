@@ -10,6 +10,7 @@ yx_require_installed();
 $customer = YxAuth::customer();
 $act      = (string)($_GET['act'] ?? 'detect');
 $detect   = null;
+$licCheck = null;
 $report   = null;
 $notice   = '';
 
@@ -23,6 +24,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $notice = '请输入要检测的内容（名称 / 描述 / 链接 / 文本）';
         } else {
             $detect = YxInfringe::detect($text);
+        }
+    } elseif ($do === 'liccheck') {
+        // 只读检测：输出判定结论，不生成对外文书、不发送任何通知
+        $lcDomain = normalize_domain((string)($_POST['domain'] ?? ''));
+        if ($lcDomain === '') {
+            $notice = '请输入要检测的域名';
+        } else {
+            $lcRaw     = trim((string)($_POST['license'] ?? ''));
+            $lcProduct = (string)($_POST['product'] ?? 'official') === 'community' ? 'community' : 'official';
+            $licCheck  = [
+                'domain'  => YxInfringeLegal::domainCheck($lcDomain),
+                'license' => $lcRaw !== '' ? YxInfringeLegal::licenseCheck($lcRaw, $lcDomain, $lcProduct) : null,
+            ];
+            log_action('infringe.liccheck', $lcDomain, ['verdict' => $licCheck['domain']['verdict'], 'auto_letter' => 0]);
         }
     } elseif ($do === 'report') {
         $targetType = in_array($_POST['target_type'] ?? '', ['app', 'url', 'text'], true) ? $_POST['target_type'] : 'text';
@@ -53,6 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $notice = '请填写作品名称、侵权说明，并指定被检测对象';
         } else {
             $d = YxInfringe::detect($text);
+            // 报案 / 涉警类诉求：仍然登记，但标记「仅人工办理」，由人工核对后导办，不按自助检测结论处理
+            $dispute = YxDispute::inspect($workTitle, $desc, $targetText);
             $sn = YxInfringe::buildReportSn();
             YxDb::insert('infringe_report', [
                 'sn'            => $sn,
@@ -70,12 +87,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'risk'          => $d['risk'],
                 'score'         => $d['score'],
                 'detect_result' => json_encode($d, JSON_UNESCAPED_UNICODE),
+                'manual_only'   => $dispute['hit'] ? 1 : 0,
+                'manual_note'   => $dispute['hit'] ? mb_substr('命中：' . implode('、', $dispute['keywords']), 0, 255) : null,
                 'status'        => 'pending',
                 'created_at'    => now(),
                 'updated_at'    => now(),
             ]);
-            log_action('infringe.report', $sn, ['risk' => $d['risk'], 'score' => $d['score']]);
-            flash('举报已提交，编号 ' . $sn . '，我们会尽快处理');
+            log_action('infringe.report', $sn, ['risk' => $d['risk'], 'score' => $d['score'], 'manual_only' => $dispute['hit'] ? 1 : 0]);
+            flash(
+                $dispute['hit']
+                    ? '举报已提交，编号 ' . $sn . '。该诉求含报案 / 涉警内容，仅人工办理，请同时拨打 110 或到就近派出所报案'
+                    : '举报已提交，编号 ' . $sn . '，我们会尽快处理'
+            );
             redirect(url('infringe.php?act=query&sn=' . urlencode($sn)));
         }
     }
@@ -141,9 +164,50 @@ require __DIR__ . '/includes/header.php';
             <?php endif; ?>
         </div>
 
+        <div class="card">
+            <h2>授权状态检测（域名比对 + 授权文件验签）</h2>
+            <p class="muted small">按授权库比对域名登记状态，并对授权文件做签名校验；篡改、过期、域名不符、产品类型不符一律判为不通过。检测结论仅供参考，最终以人工核查为准。</p>
+            <form method="post">
+                <?= csrf_field() ?>
+                <input type="hidden" name="do" value="liccheck">
+                <label>待检测域名 <input type="text" name="domain" placeholder="例如 example.com" value="<?= e((string)($_POST['domain'] ?? '')) ?>" required></label>
+                <label>授权文件（可选，粘贴授权文件 JSON 内容）
+                    <textarea name="license" rows="3" placeholder="粘贴 .license 文件内容，留空则只做域名比对"></textarea>
+                </label>
+                <label>发行形态
+                    <select name="product">
+                        <option value="official">正版发行包</option>
+                        <option value="community">开源发行包</option>
+                    </select>
+                </label>
+                <div class="form-actions"><button class="btn btn-primary" type="submit">检测授权状态</button></div>
+            </form>
+
+            <?php if ($licCheck): ?>
+                <div class="mt-4">
+                    <p>域名比对：
+                        <span class="badge <?= $licCheck['domain']['verdict'] === YxInfringeLegal::VERDICT_CLEAR ? 'badge-ok' : ($licCheck['domain']['verdict'] === YxInfringeLegal::VERDICT_UNAUTHORIZED ? 'badge-bad' : 'badge-warn') ?>">
+                            <?= e(YxInfringeLegal::verdictName((string)$licCheck['domain']['verdict'])) ?>
+                        </span>
+                        <span class="muted small"><?= e((string)$licCheck['domain']['message']) ?></span>
+                    </p>
+                    <?php if ($licCheck['license'] !== null): ?>
+                        <p>授权文件验签：
+                            <span class="badge <?= !empty($licCheck['license']['ok']) ? 'badge-ok' : 'badge-bad' ?>">
+                                <?= !empty($licCheck['license']['ok']) ? '签名有效' : '不通过' ?>
+                            </span>
+                            <span class="muted small"><?= e((string)$licCheck['license']['message']) ?></span>
+                        </p>
+                    <?php endif; ?>
+                    <p class="muted small">本检测只输出判定结论，不生成对外文书、不发送任何通知；如需处置请提交侵权举报，由人工核查后按流程办理。</p>
+                </div>
+            <?php endif; ?>
+        </div>
+
     <?php elseif ($act === 'report'): ?>
         <div class="card">
             <h2>提交侵权举报</h2>
+            <?= YxDispute::noticeHtml() ?>
             <form method="post">
                 <?= csrf_field() ?>
                 <input type="hidden" name="do" value="report">

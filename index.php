@@ -45,21 +45,40 @@ $badge = YxLicense::badge();
 $allPkgs = YxDb::all(
     "SELECT * FROM " . YxDb::table('app') . " WHERE author_type = 'official' AND type = 'package' AND status = 'on' ORDER BY id DESC"
 );
-// 主入口仍取正式版包；开源版包单独列出（同一份代码，授权模块默认关闭）
-$pkgRow  = null;
-$openPkg = null;
+/*
+ * 官方主程序包按 SKU 分三类：正版程序包（program）、安装授权包（license）、开源版（open）。
+ * 三者是独立商品，价格与下载权益各自计算，不能再按「官方包一律免费」处理。
+ */
+$pkgByKind = ['program' => null, 'license' => null, 'open' => null];
 foreach ($allPkgs as $p) {
-    $isOpen = stripos((string)$p['key'] . (string)$p['name'], 'open') !== false || mb_strpos((string)$p['name'], '开源版') !== false;
-    if ($isOpen) {
-        $openPkg = $openPkg ?: $p;
-    } else {
-        $pkgRow = $pkgRow ?: $p;
+    $kind = YxStore::packageKind($p);
+    if ($kind !== '' && !$pkgByKind[$kind]) {
+        $pkgByKind[$kind] = $p;
     }
 }
-$pkgPaid  = $pkgRow ? YxBusiness::billType($pkgRow) !== 'free' : false;
-$pkgEnt   = $pkgRow ? YxBusiness::entitlement((int)$pkgRow['id'], (int)($me['id'] ?? 0)) : null;
-// 程序包本体免费下载（下载接口只需登录）；$pkgPaid 仅代表「授权包」是否收费
-$pkgReady = (bool)$pkgRow;
+$programPkg = $pkgByKind['program'];
+$licensePkg = $pkgByKind['license'];
+$openPkg    = $pkgByKind['open'];
+
+/** 包价格文案：仅开源版免费下载，正版程序包/授权包按计费单位显示金额 */
+$pkgPriceTxt = static function (array $p): string {
+    if (YxStore::packageFree($p)) {
+        return '免费下载';
+    }
+    $bill = YxBusiness::billType($p);
+    if ($bill === 'free') {
+        return '免费';
+    }
+    return money((float)$p['price'], true) . ($bill === 'year' ? '/年' : '/次');
+};
+/** 当前登录客户对某个包的下载权益（未登录或未购买返回 null） */
+$pkgEntOf = static function (?array $p) use ($me): ?array {
+    return ($p && $me) ? YxBusiness::entitlement((int)$p['id'], (int)$me['id']) : null;
+};
+$licEnt  = $pkgEntOf($licensePkg);
+// 正版程序包/授权包按购买权益判断（含已支付订单），只有开源版登录即可下载
+$programBought = ($programPkg && $me) ? YxStore::hasPurchased($programPkg, (int)$me['id']) : false;
+$openPkgReady = $openPkg ? YxStore::packageReady($openPkg) : false;
 
 /* ------------------------------ 产品：按分组（页签） ------------------------------ */
 // 页签直接取后台「产品分组」，与 products.php 的口径一致；
@@ -571,33 +590,66 @@ if ($checkResult) {
                     <p class="lc-license-small">需携带授权ID与授权密钥签名，返回 JSON 结果。</p>
                 </div>
 
-                <?php if ($pkgRow || $openPkg): ?>
+                <?php if ($programPkg || $licensePkg || $openPkg): ?>
+                <?php
+                $lqProgSize = $programPkg ? $lqPkgSize($programPkg) : '';
+                $lqLicSize  = $licensePkg ? $lqPkgSize($licensePkg) : '';
+                $lqOpenSize = $openPkg ? $lqPkgSize($openPkg) : '';
+                ?>
                 <div class="lc-license-block">
-                    <h4>程序包下载</h4>
-                    <p class="lc-license-small">程序包免费下载（登录即可）；安装正版发行包需要的授权码属「授权包」，单独按次收费。开源版程序包同样免费下载。<br>
-                        <strong>两者是两种固定形态：开源版装好后不能切换为正式版。</strong></p>
-                    <?php if ($pkgRow && $pkgReady): ?>
-                        <a class="lc-button lc-button-dark lc-button-block" href="<?= e(url('api/store_download.php?id=' . (int)$pkgRow['id'])) ?>" download>
-                            免费下载正版程序包（v<?= e($pkgRow['version'] ?: '-') ?><?= $lqPkgSize($pkgRow) !== '' ? ' · ' . e($lqPkgSize($pkgRow)) : '' ?>）
-                        </a>
-                        <?php if ($pkgPaid): ?>
-                            <p class="lc-license-small">
-                                授权包：<strong><?= e(YxBusiness::priceLabel($pkgRow)) ?> / 次</strong>（按域名签发安装授权码）
-                                <?php if ($pkgEnt): ?>
-                                    · 您已购买授权，到期 <?= e($pkgEnt['expire_at'] ?: '永久') ?>
+                    <h4>程序包与授权包</h4>
+                    <ul>
+                        <?php if ($programPkg): ?>
+                        <li>
+                            <strong>正版程序包</strong> <?= e($pkgPriceTxt($programPkg)) ?> · 程序本体 + 官方授权模块，不含安装授权码<?= $lqProgSize !== '' ? ' · ' . e($lqProgSize) : '' ?>
+                            <?php if ($me && $programBought): ?>
+                                · 已购买 ·
+                                <?php if (YxStore::packageReady($programPkg)): ?>
+                                    <a href="<?= e(url('api/store_download.php?id=' . (int)$programPkg['id'])) ?>">下载正版程序包（zip）</a>
+                                <?php else: ?>
+                                    发行文件待上传
                                 <?php endif; ?>
-                                <br><a href="<?= e(url('store/detail.php?id=' . (int)$pkgRow['id'])) ?>">查看 / 单独购买授权包 →</a>
-                            </p>
+                            <?php elseif ($me): ?>
+                                · <a href="<?= e(url('store/detail.php?id=' . (int)$programPkg['id'])) ?>">立即购买 →</a>
+                            <?php else: ?>
+                                · <a href="<?= e(url('user/login.php')) ?>">登录后购买 →</a>
+                            <?php endif; ?>
+                        </li>
                         <?php endif; ?>
-                    <?php endif; ?>
-                    <?php if ($openPkg): ?>
-                        <a class="lc-button lc-button-outline lc-button-block" href="<?= e(url('api/store_download.php?id=' . (int)$openPkg['id'])) ?>" download>
-                            下载开源版程序包（v<?= e($openPkg['version'] ?: '-') ?><?= $lqPkgSize($openPkg) !== '' ? ' · ' . e($lqPkgSize($openPkg)) : '' ?>）
-                        </a>
-                        <p class="lc-license-small"><strong>开源版安装后不可切换正式版。</strong>开源版与正版为同一份代码，但发行包把授权模式固定为开源版：授权模块不启用，界面显示「开源版 · 未启用授权模块」。</p>
-                    <?php endif; ?>
+                        <?php if ($licensePkg): ?>
+                        <li>
+                            <strong>安装授权包</strong> <?= e($pkgPriceTxt($licensePkg)) ?> · 授权文件 + 按域名签发的安装授权码<?= $lqLicSize !== '' ? ' · ' . e($lqLicSize) : '' ?>
+                            <?php if ($me && $licEnt): ?>
+                                · 已购买 · <a href="<?= e(url('user/licenses.php')) ?>">查看授权码</a>
+                                <?php if (YxStore::packageReady($licensePkg)): ?>
+                                    · <a href="<?= e(url('api/store_download.php?id=' . (int)$licensePkg['id'])) ?>">下载授权包（zip）</a>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                · <a href="<?= e(url('store/detail.php?id=' . (int)$licensePkg['id'])) ?>"><?= $me ? '购买' : '登录后购买' ?> →</a>
+                            <?php endif; ?>
+                        </li>
+                        <?php endif; ?>
+                        <?php if ($openPkg): ?>
+                        <li>
+                            <strong>开源版</strong> 免费 · 登录后即可下载，安装后不能切换为正版<?= $lqOpenSize !== '' ? ' · ' . e($lqOpenSize) : '' ?>
+                            <?php if ($me && $openPkgReady): ?>
+                                · <a href="<?= e(url('api/store_download.php?id=' . (int)$openPkg['id'])) ?>">下载开源包（zip）</a>
+                            <?php elseif ($me): ?>
+                                · 发行文件待上传
+                            <?php else: ?>
+                                · <a href="<?= e(url('user/login.php')) ?>">登录下载 →</a>
+                            <?php endif; ?>
+                        </li>
+                        <?php endif; ?>
+                        <li>
+                            <strong>发行包</strong> 不公开销售 · 按项目定制分发，<a href="<?= e(url('user/tickets.php')) ?>">联系客服开通 →</a>
+                        </li>
+                    </ul>
+                    <p class="lc-license-small">程序包与授权包是<b>两件独立商品</b>：程序包只交付程序本体，授权包交付授权文件与按域名签发的安装授权码，购买其一不等于获得另一项。发行格式：正版程序包与开源版为明文 zip，下载后直接解压到站点根目录，<b>无解压密码</b>；安装授权包为整包密文（<code>.zip.enc</code>，包内全部文件均为密文），解密密钥随购买凭证由本站客服发放。安装时访问 <code>/install/install.php</code> 完成安装。包内普通文件解压后可自由修改，仅授权核心文件保持只读；页面、压缩包与源码里都不会出现任何可用的明文密钥。</p>
+                    <p class="lc-license-small">下列为<b>无效占位示例</b>，仅用于说明字段格式，<strong>不能用于解密或授权</strong>：<code>YX-0FF0-0000-0000-DEMO</code></p>
                 </div>
                 <?php endif; ?>
+
             </aside>
         </div>
     </div>

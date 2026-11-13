@@ -108,6 +108,7 @@ require __DIR__ . '/includes/header.php';
     <div class="grid-2">
         <div class="card">
             <h2>提交举报</h2>
+            <?= YxDispute::noticeHtml() ?>
             <form method="post">
                 <?= csrf_field() ?>
                 <input type="hidden" name="do" value="create">
@@ -164,6 +165,9 @@ require __DIR__ . '/includes/header.php';
                         <th>提交时间</th><td><?= e($detail['created_at']) ?></td>
                         <th>处理时间</th><td><?= e($detail['handled_at'] ?: '-') ?></td>
                     </tr>
+                    <?php if (!empty($detail['manual_only'])): ?>
+                        <tr><th>受理方式</th><td colspan="3"><?= YxDispute::badge($detail) ?> <span class="small muted">该诉求含报案 / 涉警内容，由客服人工核对后导办，不按自助流程自动答复。</span></td></tr>
+                    <?php endif; ?>
                     <tr><th>举报说明</th><td colspan="3" style="white-space:pre-wrap"><?= e($detail['content']) ?></td></tr>
                     <?php if ($detail['evidence']): ?>
                         <tr><th>证据</th><td colspan="3" class="mono small"><?= e($detail['evidence']) ?></td></tr>

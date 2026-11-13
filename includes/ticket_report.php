@@ -191,6 +191,12 @@ class YxTicketReport
             $ticketId = 0;
         }
 
+        // 报案 / 涉警类诉求：仍允许提交，但标记为「仅人工办理」并提升优先级，避免自助流程给出结论
+        $dispute = YxDispute::inspect($subject, $content);
+        if ($dispute['hit']) {
+            $priority = 'urgent';
+        }
+
         $sn = make_sn('RP', 'ticket_report');
         $id = YxDb::insert('ticket_report', [
             'sn'          => $sn,
@@ -206,15 +212,27 @@ class YxTicketReport
             'status'      => 'pending',
             'admin_id'    => 0,
             'handle_note' => null,
+            'manual_only' => $dispute['hit'] ? 1 : 0,
+            'manual_note' => $dispute['hit'] ? mb_substr('命中：' . implode('、', $dispute['keywords']), 0, 255) : null,
             'reply_count' => 0,
             'created_at'  => now(),
             'updated_at'  => now(),
             'handled_at'  => null,
         ]);
 
-        log_action('ticket_report.create', $sn, ['category' => $category, 'priority' => $priority]);
+        log_action('ticket_report.create', $sn, [
+            'category'    => $category,
+            'priority'    => $priority,
+            'manual_only' => $dispute['hit'] ? 1 : 0,
+        ]);
 
-        return ['ok' => true, 'msg' => '举报已提交，编号 ' . $sn, 'id' => $id, 'sn' => $sn];
+        return [
+            'ok'          => true,
+            'msg'         => '举报已提交，编号 ' . $sn,
+            'id'          => $id,
+            'sn'          => $sn,
+            'manual_only' => $dispute['hit'],
+        ];
     }
 
     /** 追加回复（customer|subsite|admin） */
@@ -250,6 +268,15 @@ class YxTicketReport
             'reply_count' => (int)$report['reply_count'] + 1,
             'updated_at'  => now(),
         ];
+        // 提交方后续补充的内容若转为报案类诉求，同步标记为「仅人工办理」
+        if ($authorType !== 'admin' && empty($report['manual_only'])) {
+            $dispute = YxDispute::inspect($content);
+            if ($dispute['hit']) {
+                $data['manual_only'] = 1;
+                $data['manual_note'] = mb_substr('命中：' . implode('、', $dispute['keywords']), 0, 255);
+                $data['priority']    = 'urgent';
+            }
+        }
         // 后台回复后自动进入「已受理」，避免遗漏
         if ($authorType === 'admin' && (string)$report['status'] === 'pending') {
             $data['status'] = 'accepted';
@@ -337,6 +364,14 @@ class YxTicketReport
             $where .= ' AND (sn LIKE ? OR subject LIKE ? OR contact LIKE ?)';
             $like = '%' . $kw . '%';
             array_push($bind, $like, $like, $like);
+        }
+
+        // 仅人工办理（报案 / 涉警类诉求）筛选
+        $manual = (string)($filter['manual'] ?? '');
+        if ($manual === '1') {
+            $where .= ' AND manual_only = 1';
+        } elseif ($manual === '0') {
+            $where .= ' AND (manual_only = 0 OR manual_only IS NULL)';
         }
 
         return [$where, $bind];

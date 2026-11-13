@@ -24,6 +24,13 @@ $form    = ['username' => '', 'email' => '', 'phone' => '', 'company' => ''];
 $mode = yx_auth_mode($_POST['mode'] ?? ($_GET['mode'] ?? 'phone'));
 $byPhone = $mode === 'phone';
 
+// 同意文案中的生效日期：取两份法律文档中较新的一份。
+// 后台未填写生效日期时，YxLegalDoc 会依次回落到更新时间、创建时间。
+$legalTerms   = YxLegalDoc::get(YxLegalDoc::TERMS);
+$legalPrivacy = YxLegalDoc::get(YxLegalDoc::PRIVACY);
+$legalDate    = max((string)$legalTerms['effective'], (string)$legalPrivacy['effective']);
+$legalDateTxt = $legalDate !== '' ? YxLegalDoc::effectiveText(['effective' => $legalDate]) : '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     $form['username'] = trim((string)($_POST['username'] ?? ''));
@@ -47,9 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $form['email'] = $email;
     }
 
-    // 验证码按所选方式收取：手机注册只校验短信码，邮箱注册只校验邮箱码；
-    // 未选中的方式仅作为可选联系方式留存（填了才校验格式与重复）。
-    $needMailCode = $byPhone ? ($mailOn && $form['email'] !== '') : $mailOn;
+    // 验证码按所选方式收取：手机注册只校验短信码，邮箱注册只校验邮箱码。
+    // 手机注册时邮箱是选填联系方式，填了只校验格式与重复，不再要求邮箱验证码
+    // （页面上也不会渲染邮箱验证码输入框，否则会形成无法提交的死循环）。
+    $needMailCode = !$byPhone && $mailOn;
     $needSmsCode  = $byPhone ? $smsOn : false;
 
     if (!preg_match('/^[a-zA-Z0-9_\x{4e00}-\x{9fa5}]{3,20}$/u', $form['username'])) {
@@ -71,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($password !== $password2) {
         $error = '两次输入的密码不一致';
     } elseif (empty($_POST['agree'])) {
-        $error = '请阅读并同意服务条款';
+        $error = '请阅读并同意《服务条款》与《隐私政策》';
     } else {
         $dup = YxDb::value(
             'SELECT COUNT(*) FROM ' . YxDb::table('customer') . ' WHERE username = ?',
@@ -195,7 +203,7 @@ $csrfToken = csrf_token();
 
             <div class="yx-auth-hero-body">
                 <h1>注册账户<br>把交付与对账交给系统</h1>
-                <p>开通账户即可自助下单与续费，订单、账单与收支流水自动归档；需要更多能力时，还能申请成为开发者，把自己的插件与主题上架到应用商店。</p>
+                <p>开通账户即可自助下单与续费，订单、账单与收支流水自动归档；需要更多能力时，还能申请成为开发者，把自己的插件与主题上架到插件中心。</p>
                 <div class="yx-auth-actions">
                     <a class="yx-auth-action is-solid" href="<?= e(url('index.php')) ?>">返回首页</a>
                     <a class="yx-auth-action is-ghost" href="<?= e(url('index.php#products')) ?>">了解产品</a>
@@ -243,6 +251,24 @@ $csrfToken = csrf_token();
                     <input type="hidden" name="aff" value="<?= e($affCode) ?>">
                 <?php endif; ?>
 
+                <?php
+                // 切换注册方式时保留推广来源，避免切换后丢失归属
+                $modeAff = $affCode !== '' ? '&aff=' . urlencode($affCode) : '';
+                /*
+                 * 注册方式放在表单顶部，只负责切换 mode（手机注册 / 邮箱注册），
+                 * 提交统一由条款勾选下方的「注 册」按钮完成。
+                 */
+                ?>
+                <div class="yx-auth-modes" role="group" aria-label="注册方式">
+                    <?php if ($byPhone): ?>
+                        <a class="yx-auth-mode is-active" href="<?= e(url('user/register.php?mode=phone' . $modeAff)) ?>" aria-current="true">手机注册</a>
+                        <a class="yx-auth-mode" href="<?= e(url('user/register.php?mode=email' . $modeAff)) ?>">邮箱注册</a>
+                    <?php else: ?>
+                        <a class="yx-auth-mode" href="<?= e(url('user/register.php?mode=phone' . $modeAff)) ?>">手机注册</a>
+                        <a class="yx-auth-mode is-active" href="<?= e(url('user/register.php?mode=email' . $modeAff)) ?>" aria-current="true">邮箱注册</a>
+                    <?php endif; ?>
+                </div>
+
                 <div class="yx-auth-field">
                     <label for="regUsername">登录账号</label>
                     <input type="text" id="regUsername" name="username" required autocomplete="username"
@@ -250,8 +276,8 @@ $csrfToken = csrf_token();
                 </div>
 
                 <div class="yx-auth-field">
-                    <label for="regEmail">邮箱</label>
-                    <input type="email" name="email" id="regEmail" required autocomplete="email"
+                    <label for="regEmail">邮箱<?= $byPhone ? '（选填）' : '' ?></label>
+                    <input type="email" name="email" id="regEmail"<?= $byPhone ? '' : ' required' ?> autocomplete="email"
                            placeholder="<?= $byPhone ? '用于接收账单与账户通知' : '用于接收验证码与账户通知' ?>"
                            value="<?= e($form['email']) ?>">
                 </div>
@@ -328,27 +354,20 @@ $csrfToken = csrf_token();
 
                 <label class="yx-auth-legal" for="regAgree">
                     <input type="checkbox" id="regAgree" name="agree" value="1" <?= !empty($_POST['agree']) ? 'checked' : '' ?>>
-                    <span>我已阅读并同意 <a href="<?= e(url('about.php')) ?>" target="_blank">服务条款</a> 与 <a href="<?= e(url('about.php')) ?>" target="_blank">隐私政策</a></span>
+                    <span class="yx-auth-legal-txt">注册即表示已阅读并同意<a href="<?= e(YxLegalDoc::url(YxLegalDoc::TERMS)) ?>" target="_blank" rel="noopener">《服务条款》</a>与<a href="<?= e(YxLegalDoc::url(YxLegalDoc::PRIVACY)) ?>" target="_blank" rel="noopener">《隐私政策》</a><?php if ($legalDateTxt !== ''): ?><span class="yx-auth-legal-date">（生效日期：<?= e($legalDateTxt) ?>）</span><?php endif; ?></span>
                 </label>
 
+                <?php /*
+                 * 条款勾选下方即主提交按钮：按顶部选中的注册方式提交（外加 hidden 的 mode），
+                 * 页面上只保留这一个「注 册」主按钮，方式切换在顶部完成。
+                 */ ?>
                 <button class="yx-auth-submit" type="submit">注 册</button>
+
+                <div class="yx-auth-foot">
+                    <a href="<?= e(url('index.php')) ?>">← 返回首页</a>
+                    <a href="<?= e(url('user/login.php')) ?>">已有账号？立即登录</a>
+                </div>
             </form>
-
-            <p class="yx-auth-switch">已有账户？<a href="<?= e(url('user/login.php')) ?>">立即登录</a></p>
-
-            <div class="yx-auth-modes">
-                <a class="yx-auth-mode<?= $byPhone ? ' is-active' : '' ?>" href="<?= e(url('user/register.php?mode=phone')) ?>"
-                   <?= $byPhone ? 'aria-current="true"' : '' ?>>手机注册</a>
-                <a class="yx-auth-mode<?= $byPhone ? '' : ' is-active' ?>" href="<?= e(url('user/register.php?mode=email')) ?>"
-                   <?= $byPhone ? '' : 'aria-current="true"' ?>>邮箱注册</a>
-            </div>
-
-            <div class="yx-auth-foot">
-                <a href="<?= e(url('index.php')) ?>">← 返回首页</a>
-                <a href="<?= e(url('user/login.php')) ?>">已有账号登录</a>
-            </div>
-
-            <?php require dirname(__DIR__) . '/includes/logo_wall.php'; ?>
         </div>
     </main>
 </div>

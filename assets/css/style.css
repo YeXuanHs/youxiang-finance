@@ -593,17 +593,66 @@ body.fu-auth-body{margin:0;min-height:100vh;background:var(--bg);
 
 /* 主导航头 */
 .zd-header{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50;box-shadow:0 2px 10px rgba(16,24,40,.04)}
-.zd-header .portal-container{display:flex;align-items:center;gap:26px;height:64px}
+.zd-header .portal-container{display:flex;align-items:center;gap:16px;height:64px}
 .zd-logo{display:flex;align-items:center;gap:10px;color:var(--ink);flex:0 0 auto}
 .zd-logo:hover{text-decoration:none}
 .zd-logo img{width:36px;height:36px;border-radius:8px;object-fit:contain}
 .zd-logo strong{font-size:17px;display:block;line-height:1.2}
 .zd-logo small{display:block;font-size:11px;color:var(--muted);font-weight:400}
 .zd-nav{display:flex;gap:2px;flex:1;min-width:0}
-.zd-nav a{color:#3b4763;font-size:14.5px;padding:8px 13px;border-radius:8px;white-space:nowrap}
+.zd-nav-close{display:none}
+.zd-nav a{color:#3b4763;font-size:13.5px;padding:8px 7px;border-radius:8px;white-space:nowrap}
 .zd-nav a:hover{color:var(--primary);text-decoration:none;background:var(--primary-soft)}
-.zd-header-actions{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+.zd-header-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+/* 徽标文案最长 9 字（授权已过期，请续费），限宽避免把按钮挤出页头 */
+.zd-header-actions .license-pill{max-width:164px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.zd-header-actions .license-pill b{flex:0 0 auto}
 .zd-menu-btn{display:none;width:36px;height:36px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:17px;color:var(--ink-3);cursor:pointer;place-items:center}
+
+/* ---- 平板/移动端页头 + 导航抽屉（断点 1200） ----
+   9 个导航项在 1200 宽容器里放不下（会横向溢出盖住右侧按钮），
+   因此 1200 以下统一切抽屉；桌面端保持常规横排。 */
+@media (max-width:1200px){
+  /* 页头压缩：隐藏 logo 副标题，标题超出时省略，避免把按钮挤出屏幕 */
+  .zd-header .portal-container{gap:12px;height:58px;padding:0 14px}
+  .zd-logo{min-width:0;flex:0 1 auto}
+  .zd-logo img{width:30px;height:30px}
+  .zd-logo span{min-width:0}
+  .zd-logo strong{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .zd-logo small{display:none}
+  .zd-header-actions{min-width:0}
+  .zd-menu-btn{display:grid;flex:0 0 auto}
+
+  /* 抽屉：贴在页头下沿整宽展开。
+     必须保持 absolute 定位，若改成 relative，导航会退回成 58px 页头里的
+     flex 子项、宽度被压到 0，链接文字横向溢出并盖住页头按钮。 */
+  .zd-nav{
+    display:none;position:absolute;left:0;right:0;top:100%;z-index:2;
+    flex-direction:column;gap:0;
+    max-height:calc(100vh - 92px);max-height:calc(100dvh - 92px);
+    padding:6px 14px calc(14px + env(safe-area-inset-bottom));
+    background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    box-shadow:0 20px 34px rgba(16,24,40,.16);
+    overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  }
+  body.zd-nav-open .zd-nav{display:flex}
+  body.zd-nav-open{overflow:hidden}
+  /* 遮罩挂在 sticky 页头下沿（随页头移动），层级低于抽屉，不压暗菜单本身 */
+  .zd-nav-mask{
+    display:none;position:absolute;left:0;right:0;top:100%;z-index:1;
+    height:100vh;height:100dvh;background:rgba(15,23,42,.45);
+  }
+  body.zd-nav-open .zd-nav-mask{display:block}
+  /* 抽屉展开时隐藏右侧悬浮栏，避免压在遮罩之上 */
+  body.zd-nav-open .zd-float{display:none}
+
+  .zd-nav-close{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;padding:4px 8px 10px;border-bottom:1px solid var(--line);color:var(--ink-3);font-size:13px;font-weight:600}
+  .zd-nav-close button{display:grid;place-items:center;width:30px;height:30px;border:0;border-radius:8px;background:var(--surface-3);font-size:15px;line-height:1;color:var(--ink-3);cursor:pointer}
+  .zd-nav a{padding:13px 8px;font-size:15px;border-radius:0;border-bottom:1px solid var(--line);-webkit-tap-highlight-color:transparent}
+  .zd-nav a:last-of-type{border-bottom:0}
+  .zd-nav a:hover{background:transparent}
+  .zd-nav a:active{background:var(--primary-soft)}
+}
 
 /* ---- 横幅轮播 ---- */
 .zd-banner{position:relative;overflow:hidden;background:#16215c}
@@ -746,7 +795,7 @@ a.zd-tabs-item{text-decoration:none;display:block}
 
 /* ---- 页脚：服务承诺条 ---- */
 .zd-foot-service{background:#fff;border-top:1px solid var(--line);padding:28px 0}
-.zd-foot-service ul{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:0;padding:0;list-style:none}
+.zd-foot-service ul{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:0;padding:0;list-style:none}
 .zd-foot-service a{display:flex;align-items:center;gap:12px;color:var(--ink)}
 .zd-foot-service a:hover{text-decoration:none}
 .zd-foot-service a:hover b{color:var(--primary)}
@@ -803,11 +852,6 @@ a.zd-tabs-item{text-decoration:none;display:block}
 }
 @media (max-width:860px){
   .zd-topbar-links{display:none}
-  .zd-nav{display:none;position:absolute;left:0;right:0;top:100%;background:#fff;flex-direction:column;gap:2px;padding:10px 18px 16px;border-bottom:1px solid var(--line);box-shadow:0 16px 26px rgba(16,24,40,.10)}
-  body.zd-nav-open .zd-nav{display:flex}
-  .zd-menu-btn{display:grid}
-  .zd-header-actions .license-pill{display:none}
-  .zd-header .portal-container{gap:12px;height:58px}
   .zd-events{grid-template-columns:repeat(2,1fr);margin-top:-30px}
   .zd-event:nth-child(2n){border-right:0}
   .zd-event{border-bottom:1px solid var(--line)}
@@ -825,8 +869,16 @@ a.zd-tabs-item{text-decoration:none;display:block}
   .zd-float{bottom:96px}
   .zd-float button{width:42px;height:42px}
 }
+@media (max-width:680px){
+  /* 小屏页头只留主操作（注册/后台）与菜单键；授权徽标在首页 #license 区仍可见 */
+  .zd-header-actions .license-pill{display:none}
+}
 @media (max-width:560px){
   .portal-container{padding:0 16px}
+  .zd-header .portal-container{gap:8px;padding:0 12px}
+  .zd-logo img{width:28px;height:28px}
+  .zd-logo strong{font-size:15px}
+  .zd-header-actions .btn{padding:5px 8px;font-size:12px}
   .zd-solutions{grid-template-columns:1fr}
   .zd-footer-cols{grid-template-columns:1fr}
   .zd-footer-copy{flex-direction:column}
@@ -836,22 +888,17 @@ a.zd-tabs-item{text-decoration:none;display:block}
   .zd-tabs-item{min-width:0;flex:1 1 40%}
 }
 
+@media (max-width:400px){
+  /* 极窄屏只保留主按钮（注册/用户后台）与菜单键，登录入口在认证页可切换，避免页头横向溢出 */
+  .zd-header-actions .btn-ghost{display:none}
+}
+
 /* ==========================================================================
    21. 移动端体验增强（手机优先）
-   目标：导航抽屉带遮罩/滚动锁定/关闭；授权查询移动优先；数据列表卡片化
-   仅 @media (max-width:860px) 生效，桌面布局不受影响
+   目标：授权查询移动优先；数据列表卡片化
+   导航抽屉已上移到「断点 1200」块，此处只处理表单/表格的移动化
    ========================================================================== */
 @media (max-width:860px){
-  /* ---- 导航抽屉：遮罩 + 滚动锁定 + 关闭按钮 ---- */
-  .zd-nav-mask{display:none}
-  body.zd-nav-open .zd-nav-mask{display:block;position:fixed;inset:0;z-index:45;background:rgba(15,23,42,.45)}
-  .zd-nav{position:relative}
-  .zd-nav-close{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding:6px 4px 10px;border-bottom:1px solid var(--line);color:var(--ink-3);font-size:13px;font-weight:600}
-  .zd-nav-close button{border:0;background:var(--surface-3);width:30px;height:30px;border-radius:8px;font-size:16px;color:var(--ink-3);cursor:pointer;place-items:center}
-  .zd-nav a{padding:11px 12px;font-size:15px}
-  /* 抽屉展开时锁定页面滚动 */
-  body.zd-nav-open{overflow:hidden}
-
   /* ---- 授权查询：移动优先，表单与结果卡片化 ---- */
   .zd-lic-form .inline-form{flex-direction:column;align-items:stretch}
   .zd-lic-form .inline-form label{width:100%}
@@ -1319,4 +1366,28 @@ body.user-body .content{padding:20px var(--gutter) 26px}
   .zd-lq-alert-pill{display:none}
   .zd-lq-side{grid-template-columns:1fr}
   .zd-lq-block{padding:16px}
+}
+
+/* ---- 法律文档（服务条款 / 隐私政策） ---- */
+.yx-legal{max-width:860px;margin:0 auto;padding:40px 0 56px}
+.yx-legal-head{margin-bottom:20px}
+.yx-legal-kicker{margin:0 0 8px;font-size:12px;letter-spacing:.16em;color:var(--primary);font-weight:650}
+.yx-legal-head h1{margin:0 0 10px;font-size:30px;line-height:1.35}
+.yx-legal-desc{margin:0;color:var(--muted);font-size:14px;line-height:1.8}
+.yx-legal-meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px;font-size:12.5px;color:var(--muted)}
+.yx-legal-meta span{display:inline-flex;align-items:baseline;gap:6px}
+.yx-legal-meta b{font-weight:600;color:var(--ink-3)}
+.yx-legal-body{padding:28px 32px;font-size:14.5px;line-height:1.95;color:var(--ink-2)}
+.yx-legal-body h2{margin:28px 0 10px;font-size:17px;line-height:1.5;color:var(--ink)}
+.yx-legal-body h2:first-child{margin-top:0}
+.yx-legal-body p{margin:0 0 14px}
+.yx-legal-body p:last-child{margin-bottom:0}
+.yx-legal-body ul{margin:0 0 14px;padding-left:22px}
+.yx-legal-body li{margin:4px 0}
+.yx-legal-body .empty{padding:26px}
+.yx-legal-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;margin-top:18px;font-size:13px}
+@media (max-width:640px){
+  .yx-legal{padding:26px 0 40px}
+  .yx-legal-head h1{font-size:24px}
+  .yx-legal-body{padding:20px 18px;font-size:14px}
 }

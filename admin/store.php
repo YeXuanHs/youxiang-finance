@@ -13,6 +13,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     $action = (string)($_POST['action'] ?? '');
     $res    = ['ok' => false, 'msg' => '未知操作'];
+    $auditTarget = '';
+    $auditDetail = [];
 
     if ($action === 'save_app') {
         $id   = (int)($_POST['id'] ?? 0);
@@ -39,6 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'source'       => trim((string)($_POST['source'] ?? '')),
                 'specs'        => json_encode(YxServiceCenter::cleanSpecs($_POST['specs'] ?? '[]'), JSON_UNESCAPED_UNICODE),
                 'price_options' => json_encode(YxStore::cleanOptions($_POST['price_options'] ?? ''), JSON_UNESCAPED_UNICODE),
+                /* 仅官方发行包（type=package + author_type=official）使用：仓库相对路径，
+                   前后台下载都要求它落在 uploads/ 之内，非法值会被 YxStore::packageFile() 拦下 */
+                'package_path' => ltrim(trim((string)($_POST['package_path'] ?? '')), '/'),
                 'language'     => trim((string)($_POST['language'] ?? '')) ?: '简体中文',
                 'published_at' => trim((string)($_POST['published_at'] ?? '')) ?: now(),
                 'featured'     => !empty($_POST['featured']) ? 1 : 0,
@@ -74,6 +79,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($app) {
             YxDb::update('app', ['status' => $app['status'] === 'on' ? 'off' : 'on', 'updated_at' => now()], 'id = :id', ['id' => $id]);
             $res = ['ok' => true, 'msg' => '状态已切换'];
+        }
+    } elseif ($action === 'upload_package') {
+        /*
+         * 官方发行包上传：只允许绑定到 author_type=official 且 type=package 的条目。
+         * 文件名沿用发行包命名（.zip 正版程序包与开源包 / .zip.enc 安装授权包，兼容旧版 .tar.gz.enc），不接受随机重命名，保证 package_path、
+         * dist 受控副本与运维交付的文件名一致；同名文件原子替换。
+         */
+        $id   = (int)($_POST['id'] ?? 0);
+        $app  = YxDb::one('SELECT * FROM ' . YxDb::table('app') . ' WHERE id = ?', [$id]);
+        $file = $_FILES['package_file'] ?? null;
+        if (!$app || !YxStore::isOfficialPackage($app)) {
+            $res = ['ok' => false, 'msg' => '仅官方发行包（type=package）可上传'];
+        } elseif (!is_array($file) || (int)($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            $res = ['ok' => false, 'msg' => '请选择要上传的发行包'];
+        } elseif ((int)$file['error'] !== UPLOAD_ERR_OK) {
+            $res = ['ok' => false, 'msg' => '上传失败（错误码 ' . (int)$file['error'] . '），请检查 PHP 上传大小限制'];
+        } elseif ((int)($file['size'] ?? 0) <= 0) {
+            $res = ['ok' => false, 'msg' => '发行包为空文件'];
+        } else {
+            $name = basename((string)($file['name'] ?? ''));
+            if (strpos($name, '..') !== false
+                || !preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]*\.(?:zip\.enc|zip|tar\.gz\.enc)$/', $name)) {
+                $res = ['ok' => false, 'msg' => '文件名不合法：仅允许字母、数字、点、下划线与短横线，且必须以 .zip（正版程序包/开源包）、.zip.enc（安装授权包）或旧格式 .tar.gz.enc 结尾'];
+            } else {
+                $dir = yx_upload_dir('license');
+                if (!is_writable($dir)) {
+                    $res = ['ok' => false, 'msg' => '上传目录不可写：uploads/license'];
+                } else {
+                    $tmp  = $dir . '/.upload-' . bin2hex(random_bytes(6)) . '.tmp';
+                    $dest = $dir . '/' . $name;
+                    $moved = PHP_SAPI === 'cli'
+                        ? @copy($file['tmp_name'], $tmp)
+                        : @move_uploaded_file($file['tmp_name'], $tmp);
+                    if (!$moved) {
+                        $res = ['ok' => false, 'msg' => '保存文件失败'];
+                    } elseif (!@rename($tmp, $dest)) {
+                        @unlink($tmp);
+                        $res = ['ok' => false, 'msg' => '写入发行包失败'];
+                    } else {
+                        @chmod($dest, 0640);
+                        $size = (int)@filesize($dest);
+                        YxDb::update('app', [
+                            'package_path' => 'license/' . $name,
+                            'package_size' => $size,
+                            'updated_at'   => now(),
+                        ], 'id = :id', ['id' => $id]);
+
+                        // 受控副本：dist/ 在站点根目录之外且通常仅 root 可写，不可写时不影响前台下载
+                        $distDir = rtrim((string)config('store.release_dir', ''), '/');
+                        $distOk  = false;
+                        if ($distDir !== '' && @is_dir($distDir) && @is_writable($distDir)) {
+                            $distOk = @copy($dest, $distDir . '/' . $name);
+                            if ($distOk) {
+                                @chmod($distDir . '/' . $name, 0640);
+                            }
+                        }
+                        $auditTarget = 'app#' . $id;
+                        $auditDetail = ['file' => $name, 'size' => $size, 'dist_synced' => (bool)$distOk];
+                        $res = [
+                            'ok'  => true,
+                            'msg' => '发行包已上传并绑定（' . number_format($size / 1048576, 2) . ' MB）'
+                                . ($distOk ? '，受控副本已同步' : '；dist/ 不可写，受控副本需运维同步'),
+                        ];
+                    }
+                }
+            }
         }
     } elseif ($action === 'save_cat') {
         $cid  = (int)($_POST['cid'] ?? 0);
@@ -148,7 +219,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    log_action('store.' . $action, '', ['ok' => $res['ok'] ?? false]);
+    log_action('store.' . $action, $auditTarget, $auditDetail + ['ok' => $res['ok'] ?? false]);
     flash($res['msg'], !empty($res['ok']) ? 'success' : 'error');
     redirect(url('admin/store.php?tab=' . urlencode(in_array($action, ['save_cat', 'delete_cat'], true) ? 'cats' : ($action === 'uninstall' ? 'installs' : 'apps'))));
 }
@@ -173,6 +244,44 @@ $installs = YxDb::all(
 
 $pageTitle  = '商店管理';
 $activeMenu = 'store';
+
+/*
+ * 发行包分发状态（只读）
+ *
+ * 官方主程序包有两个副本，本卡片把它们的状态并排展示，避免「以为已发布、
+ * 其实某个通道没文件」这类静默失败：
+ *   uploads/ 副本 → 前台客户下载通道（api/store_download.php，按购买权益放行）
+ *   dist/ 副本   → 后台受控分发通道（admin/release_download.php，仅管理员）
+ * 只输出大小/时间/指纹，绝不输出绝对路径与任何密钥。
+ */
+$releaseCards = [];
+$officialPkgs = YxDb::all(
+    'SELECT * FROM ' . YxDb::table('app') . " WHERE author_type = 'official' AND type = 'package' ORDER BY id ASC"
+);
+foreach ($officialPkgs as $p) {
+    $distFile   = YxStore::releaseFile($p);      // 受控目录（站点根目录之外）
+    $publicFile = YxStore::packageFile($p);      // uploads/ 副本（前台下载用）
+
+    $releaseCards[] = [
+        'app'        => $p,
+        'kind'       => YxStore::packageKind($p),
+        'dist'       => $distFile,
+        'public'     => $publicFile,
+        'dist_size'  => $distFile ? (int)@filesize($distFile) : 0,
+        'dist_mtime' => $distFile ? (int)@filemtime($distFile) : 0,
+        'pub_size'   => $publicFile ? (int)@filesize($publicFile) : 0,
+        'pub_mtime'  => $publicFile ? (int)@filemtime($publicFile) : 0,
+    ];
+}
+/* 两份副本是否一致：同大小即视为同步（不做全量哈希，避免每次打开后台都读 6MB） */
+$releaseInSync = true;
+foreach ($releaseCards as $c) {
+    if (!$c['dist'] || !$c['public'] || $c['dist_size'] !== $c['pub_size']) {
+        $releaseInSync = false;
+        break;
+    }
+}
+
 require dirname(__DIR__) . '/includes/admin_header.php';
 ?>
 
@@ -270,6 +379,85 @@ require dirname(__DIR__) . '/includes/admin_header.php';
     </div>
 
 <?php else: ?>
+    <?php if ($releaseCards): ?>
+    <div class="card">
+        <div class="section-head">
+            <h2>发行包分发</h2>
+            <span class="badge <?= $releaseInSync ? 'badge-ok' : 'badge-bad' ?>"><?= $releaseInSync ? '两份副本已同步' : '副本不一致，请重新发布' ?></span>
+        </div>
+        <p class="muted small" style="margin:0 0 10px">
+            客户下载走 <code>uploads/</code> 副本（按购买权益放行）；此处「受控分发」直取站点根目录之外的
+            <code>dist/</code> 副本（仅管理员可取，前台无直链）。两者内容应保持一致。
+        </p>
+        <div class="table-wrap"><table class="data">
+            <thead><tr><th>SKU</th><th>应用</th><th>版本</th><th>受控副本（dist）</th><th>客户副本（uploads）</th><th>操作</th></tr></thead>
+            <tbody>
+            <?php foreach ($releaseCards as $c): ?>
+                <?php
+                $kindName = ['open' => '开源版', 'license' => '安装授权包', 'program' => '正版程序包'][$c['kind']] ?? $c['kind'];
+                ?>
+                <tr>
+                    <td><span class="badge badge-info"><?= e($kindName) ?></span></td>
+                    <td><?= e($c['app']['name']) ?></td>
+                    <td class="mono small"><?= e($c['app']['version']) ?></td>
+                    <td>
+                        <?php if ($c['dist']): ?>
+                            <span class="badge badge-ok">就绪</span>
+                            <span class="muted small"><?= e(number_format($c['dist_size'] / 1048576, 2)) ?> MB · <?= e(date('Y-m-d H:i', $c['dist_mtime'])) ?></span>
+                        <?php else: ?>
+                            <span class="badge badge-mute">缺失</span>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <?php if ($c['public']): ?>
+                            <span class="badge badge-ok">就绪</span>
+                            <span class="muted small"><?= e(number_format($c['pub_size'] / 1048576, 2)) ?> MB · <?= e(date('Y-m-d H:i', $c['pub_mtime'])) ?></span>
+                        <?php else: ?>
+                            <span class="badge badge-bad">缺失（客户无法下载）</span>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <?php if ($c['dist']): ?>
+                            <a class="btn btn-sm btn-ghost" href="<?= e(url('admin/release_download.php?id=' . (int)$c['app']['id'])) ?>">下载受控副本</a>
+                        <?php else: ?>
+                            <span class="muted small">-</span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table></div>
+        <details style="margin-top:14px">
+            <summary style="cursor:pointer;color:var(--primary)">上传发行包</summary>
+            <form method="post" enctype="multipart/form-data" style="margin-top:12px">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="upload_package">
+                <div class="grid-2">
+                    <label>目标商品
+                        <select name="id" required>
+                            <?php foreach ($officialPkgs as $p): ?>
+                                <?php $pKind = ['open' => '开源版', 'license' => '安装授权包', 'program' => '正版程序包'][YxStore::packageKind($p)] ?? YxStore::packageKind($p); ?>
+                                <option value="<?= (int)$p['id'] ?>"><?= e($pKind . ' · ' . $p['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <label>发行文件（.zip / .zip.enc，同名覆盖）
+                        <input type="file" name="package_file" accept=".enc,.zip" required>
+                    </label>
+                </div>
+                <p class="muted small" style="margin:0 0 10px">
+                    上传后写入 <code>uploads/license/</code> 并更新该商品的 <code>package_path</code> 与包大小；
+                    <code>dist/</code> 受控副本不可写时需运维同步。当前 PHP 上传上限：
+                    <code><?= e((string)ini_get('upload_max_filesize')) ?></code> / 表单 <code><?= e((string)ini_get('post_max_size')) ?></code>。
+                </p>
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">上传并绑定</button>
+                </div>
+            </form>
+        </details>
+    </div>
+    <?php endif; ?>
+
     <div class="card">
         <details <?= $editing ? 'open' : '' ?>>
             <summary style="cursor:pointer;color:var(--primary)"><?= $editing ? '编辑应用：' . e($editing['name']) : '＋ 上架新应用' ?></summary>
@@ -323,6 +511,9 @@ require dirname(__DIR__) . '/includes/admin_header.php';
                 <label>按授权版本报价（JSON：<code>[{"edition":"basic","price":199,"bill_type":"year"}]</code>；
                     edition 取 basic / pro / enterprise，price 为该版本实际售价，bill_type 取 free / once / year）
                     <textarea name="price_options" class="mono" rows="5" placeholder='[{"edition":"basic","price":199,"bill_type":"year"},{"edition":"pro","price":299,"bill_type":"year"},{"edition":"enterprise","price":399,"bill_type":"year"}]'><?= e($editing ? json_encode(YxStore::options($editing), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : '') ?></textarea>
+                </label>
+                <label>官方发行包（受控分发，仅 <code>type=package</code> 且 <code>author_type</code>=official 的条目生效）
+                    <input type="text" name="package_path" value="<?= e($editing['package_path'] ?? '') ?>" placeholder="license/youxiang-finance-1.6.4-license.zip">
                 </label>
                 <?php if ($editing && YxStore::hasMultiPrice($editing)): ?>
                     <p class="muted small">当前生效报价：<?php

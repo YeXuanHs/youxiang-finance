@@ -43,6 +43,7 @@ $filter = [
     'category' => (string)($_GET['category'] ?? ''),
     'priority' => (string)($_GET['priority'] ?? ''),
     'kw'       => (string)($_GET['kw'] ?? ''),
+    'manual'   => (string)($_GET['manual'] ?? ''),
 ];
 
 $detailId = (int)($_GET['id'] ?? 0);
@@ -88,6 +89,7 @@ require dirname(__DIR__) . '/includes/admin_header.php';
             <a class="btn btn-ghost btn-sm" href="<?= e(url('admin/ticket_reports.php')) ?>">返回列表</a>
         </div>
     </div>
+    <?= YxDispute::adminPanel($detail) ?>
     <table class="data">
         <tr>
             <th>提交方</th><td><?= e($detail['reporter_label']) ?></td>
@@ -129,7 +131,7 @@ require dirname(__DIR__) . '/includes/admin_header.php';
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="reply">
                 <input type="hidden" name="id" value="<?= (int)$detail['id'] ?>">
-                <label>回复内容 <textarea name="content" required placeholder="告知受理进度或处理结论"></textarea></label>
+                <label>回复内容 <textarea name="content" required placeholder="告知受理进度或处理结论"><?= !empty($detail['manual_only']) ? e(YxDispute::handoffText()) : '' ?></textarea></label>
                 <div class="form-actions"><button class="btn btn-primary" type="submit">提交回复</button></div>
             </form>
         </div>
@@ -197,6 +199,13 @@ require dirname(__DIR__) . '/includes/admin_header.php';
                 </select>
             </label>
             <label>关键字 <input type="text" name="kw" value="<?= e($filter['kw']) ?>" placeholder="编号 / 标题 / 联系方式"></label>
+            <label>受理方式
+                <select name="manual">
+                    <option value="" <?= $filter['manual'] === '' ? 'selected' : '' ?>>全部</option>
+                    <option value="1" <?= $filter['manual'] === '1' ? 'selected' : '' ?>>仅人工办理（报案类）</option>
+                    <option value="0" <?= $filter['manual'] === '0' ? 'selected' : '' ?>>常规举报</option>
+                </select>
+            </label>
             <button class="btn btn-primary" type="submit">查询</button>
         </form>
     </div>
@@ -206,7 +215,7 @@ require dirname(__DIR__) . '/includes/admin_header.php';
         <?php foreach ($rows as $r): ?>
             <tr>
                 <td class="mono small"><?= e($r['sn']) ?></td>
-                <td class="wrap"><?= e($r['subject']) ?><br><span class="muted small"><?= e(mb_substr((string)$r['content'], 0, 50)) ?></span></td>
+                <td class="wrap"><?= e($r['subject']) ?> <?= YxDispute::badge($r) ?><br><span class="muted small"><?= e(mb_substr((string)$r['content'], 0, 50)) ?></span></td>
                 <td class="small"><?= e(YxTicketReport::categoryName((string)$r['category'])) ?></td>
                 <td><span class="badge <?= e(YxTicketReport::priorityBadge((string)$r['priority'])) ?>"><?= e(YxTicketReport::priorityName((string)$r['priority'])) ?></span></td>
                 <td class="small"><?= (int)$r['customer_id'] > 0 ? '客户 #' . (int)$r['customer_id'] : ((int)$r['subsite_id'] > 0 ? '分站 #' . (int)$r['subsite_id'] : '游客') ?></td>

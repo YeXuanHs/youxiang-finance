@@ -142,6 +142,7 @@ require dirname(__DIR__) . '/includes/user_header.php';
 <div class="grid-2">
     <div class="card" id="yxTicketNew">
         <h2>提交新工单</h2>
+        <?= YxDispute::noticeHtml() ?>
         <form method="post">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="create">

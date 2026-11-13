@@ -84,7 +84,7 @@ class YxBusiness
     const SUBSITE_SETTLE_TYPES = ['new', 'renew', 'app', 'edition'];
 
     /** 主程序包商品标记：授权码需在空站点上离线复核，走固定产品密钥签发 */
-    const PACKAGE_APP_KEYS = ['youxiang-finance-official', 'youxiang-finance-open'];
+    const PACKAGE_APP_KEYS = ['youxiang-finance-official', 'youxiang-finance-license', 'youxiang-finance-open'];
 
     public static function cycleName(string $cycle): string
     {
@@ -675,6 +675,17 @@ class YxBusiness
             $publisherId = 0;
         }
 
+        // 商店应用下单快照：授权版本与计费方式必须随订单落库，
+        // 否则交付时只能回退到商品基础价，可能出现「按专业版付款、按普惠版交付」。
+        $appEdition = (string)($data['app_edition'] ?? '');
+        if (!isset(YxEdition::EDITIONS[$appEdition])) {
+            $appEdition = null;
+        }
+        $appBill = (string)($data['app_bill_type'] ?? '');
+        if (!in_array($appBill, ['free', 'once', 'year', 'points'], true)) {
+            $appBill = null;
+        }
+
         $id = YxDb::insert('order', [
             'sn'          => make_sn(config('finance.order_prefix', 'YX'), 'order'),
             'customer_id' => $customerId,
@@ -682,6 +693,8 @@ class YxBusiness
             'product_id'  => (int)($data['product_id'] ?? 0),
             'service_id'  => (int)($data['service_id'] ?? 0),
             'app_id'      => (int)($data['app_id'] ?? 0),
+            'app_edition' => $appEdition,
+            'app_bill_type' => $appBill,
             'name'        => $data['name'] ?? null,
             'amount'      => $amount,
             'discount'    => $discount,
@@ -1109,15 +1122,27 @@ class YxBusiness
                 $appRow = (int)$order['app_id'] > 0
                     ? YxDb::one('SELECT * FROM ' . YxDb::table('app') . ' WHERE id = ?', [(int)$order['app_id']])
                     : null;
-                if ($appRow && (string)($appRow['author_type'] ?? '') === 'thirdparty') {
-                    // 资源型：授予下载权益（不签发域名授权）
-                    self::grantResource($appRow, (int)$order['customer_id'], $orderId);
+                // 订单快照决定交付档位；历史订单没有快照时由 appEdition() 回退到商品默认报价
+                $buyEdition = (string)($order['app_edition'] ?? '');
+                $buyBill    = (string)($order['app_bill_type'] ?? '');
+                /*
+                 * 正版程序包（program）只交付「下载权益」，不签发安装授权码：
+                 * 授权码属于单独的安装授权包（license）SKU，若程序包下单也走 installApp，
+                 * 88 元的程序包会顺带生成一枚 366 元授权包才该有的有效授权码。
+                 */
+                $pkgProgram = $appRow && class_exists('YxStore') && YxStore::packageKind($appRow) === 'program';
+                if ($appRow && ((string)($appRow['author_type'] ?? '') === 'thirdparty' || $pkgProgram)) {
+                    // 资源型 / 程序包本体：授予下载权益（不签发域名授权）
+                    self::grantResource($appRow, (int)$order['customer_id'], $orderId, $buyEdition, $buyBill, (float)$total);
                 } else {
                     self::installApp([
                         'app_id'      => (int)$order['app_id'],
                         'customer_id' => (int)$order['customer_id'],
                         'order_id'    => $orderId,
                         'domain'      => $order['name'] ?: '',
+                        'edition'     => $buyEdition,
+                        'bill_type'   => $buyBill,
+                        'price'       => (float)$total,
                     ]);
                 }
                 // 开发者商品成交 → 写入分成（幂等）
@@ -1358,15 +1383,14 @@ class YxBusiness
     }
 
     /** 依据计费方式计算授权/权益到期日 */
-    public static function appExpire(array $app): ?string
+    public static function appExpire(array $app, ?string $bill = null): string
     {
-        $bill = self::billType($app);
-        // 一次性与积分 = 永久有效（到期日留空；NULL 即「永久」口径，代码里已统一按此处理）；
-        // 按年与免费默认一年
-        if ($bill === 'year' || $bill === 'free') {
-            return date('Y-m-d', strtotime('+1 year'));
+        $bill = $bill ?? self::billType($app);
+        if (!in_array($bill, ['free', 'once', 'year', 'points'], true)) {
+            $bill = self::billType($app);
         }
-        return null;
+        // 一次性与积分为长期；按年与免费默认一年
+        return date('Y-m-d', strtotime(($bill === 'year' || $bill === 'free') ? '+1 year' : '+50 year'));
     }
 
     /**
@@ -1378,10 +1402,13 @@ class YxBusiness
      *
      * 规则：按年 / 免费的按周期在现有到期日上顺延；一次性 / 积分属长期授权，取更晚的一方。
      */
-    public static function appExpireAfter(array $app, ?string $current): ?string
+    public static function appExpireAfter(array $app, ?string $current, ?string $bill = null): string
     {
-        $bill  = self::billType($app);
-        $fresh = self::appExpire($app);
+        $bill  = $bill ?? self::billType($app);
+        if (!in_array($bill, ['free', 'once', 'year', 'points'], true)) {
+            $bill = self::billType($app);
+        }
+        $fresh = self::appExpire($app, $bill);
         $keep  = trim((string)$current);
         if ($keep === '') {
             return $fresh;
@@ -1394,23 +1421,28 @@ class YxBusiness
             }
             return $fresh;
         }
-        // 一次性 / 积分 = 永久：无论旧记录带什么到期日，统一写成永久
-        if ($fresh === null) {
-            return null;
-        }
         return $keep > $fresh ? $keep : $fresh;
     }
 
-    /** 客户对某应用/资源的有效权益（启用且未过期） */
-    public static function entitlement(int $appId, int $customerId): ?array
+    /**
+     * 客户对某应用/资源的有效权益（启用且未过期）
+     *
+     * $domain 传入时按绑定域名精确匹配。应用授权按域名签发，只用 app+customer
+     * 判定会把「已买过 A 域名」误当成「已拥有该应用」，导致无法为第二个域名下单。
+     */
+    public static function entitlement(int $appId, int $customerId, ?string $domain = null): ?array
     {
         if ($appId <= 0 || $customerId <= 0) {
             return null;
         }
-        $row = YxDb::one(
-            'SELECT * FROM ' . YxDb::table('app_install') . " WHERE app_id = ? AND customer_id = ? AND status = 'enabled' ORDER BY id DESC LIMIT 1",
-            [$appId, $customerId]
-        );
+        $sql = 'SELECT * FROM ' . YxDb::table('app_install')
+            . " WHERE app_id = ? AND customer_id = ? AND status = 'enabled'";
+        $bind = [$appId, $customerId];
+        if ($domain !== null) {
+            $sql .= ' AND domain = ?';
+            $bind[] = $domain;
+        }
+        $row = YxDb::one($sql . ' ORDER BY id DESC LIMIT 1', $bind);
         if (!$row) {
             return null;
         }
@@ -1420,29 +1452,77 @@ class YxBusiness
         return $row;
     }
 
-    /** 为资源型应用授予下载权益（domain=resource） */
-    public static function grantResource(array $app, int $customerId, int $orderId = 0): array
+    /**
+     * 解析实际购买的授权版本
+     *
+     * 未指定时依次回退：商品默认报价（随站点当前版本）→ 商品最低适用版本。
+     * 历史订单/旧调用方没有版本信息，也能落到一个合法档位。
+     */
+    public static function appEdition(array $app, ?string $edition = null): string
     {
-        $exists = YxDb::one(
+        $edition = (string)$edition;
+        if (isset(YxEdition::EDITIONS[$edition])) {
+            return $edition;
+        }
+        if (class_exists('YxStore')) {
+            $q = YxStore::quote($app);
+            if ($q && isset(YxEdition::EDITIONS[$q['edition']])) {
+                return (string)$q['edition'];
+            }
+        }
+        $min = (string)($app['edition_min'] ?? 'basic');
+        return isset(YxEdition::EDITIONS[$min]) ? $min : 'basic';
+    }
+
+    /** 归一计费方式；未指定时跟随实际购买版本 */
+    public static function appBillFor(array $app, string $edition, ?string $bill = null): string
+    {
+        if (in_array((string)$bill, ['free', 'once', 'year', 'points'], true)) {
+            return (string)$bill;
+        }
+        if (class_exists('YxStore')) {
+            $b = YxStore::effectiveBill($app, $edition);
+            if (in_array($b, ['free', 'once', 'year', 'points'], true)) {
+                return $b;
+            }
+        }
+        return self::billType($app);
+    }
+
+    /** 为资源型应用授予下载权益（domain=resource） */
+    public static function grantResource(array $app, int $customerId, int $orderId = 0, ?string $edition = null, ?string $bill = null, ?float $price = null): array
+    {
+        $edition = self::appEdition($app, $edition);
+        $bill    = self::appBillFor($app, $edition, $bill);
+        $exists  = YxDb::one(
             'SELECT * FROM ' . YxDb::table('app_install') . ' WHERE app_id = ? AND customer_id = ? AND domain = ? LIMIT 1',
             [(int)$app['id'], $customerId, 'resource']
         );
         if ($exists) {
-            $expire = self::appExpireAfter($app, $exists['expire_at'] ?? null);
-            YxDb::update('app_install', [
-                'app_key'   => $app['key'],
-                'status'    => 'enabled',
-                'expire_at' => $expire,
-                'order_id'  => $orderId > 0 ? $orderId : (int)$exists['order_id'],
-            ], 'id = :id', ['id' => (int)$exists['id']]);
+            $expire = self::appExpireAfter($app, $exists['expire_at'] ?? null, $bill);
+            $row = [
+                'app_key'    => $app['key'],
+                'status'     => 'enabled',
+                'expire_at'  => $expire,
+                'order_id'   => $orderId > 0 ? $orderId : (int)$exists['order_id'],
+                'edition'    => self::higherEdition((string)($exists['edition'] ?? 'basic'), $edition),
+                'bill_type'  => $bill,
+            ];
+            if ($price !== null) {
+                $row['price'] = round_money(max(0, $price));
+            }
+            YxDb::update('app_install', $row, 'id = :id', ['id' => (int)$exists['id']]);
         } else {
-            $expire = self::appExpire($app);
+            $expire = self::appExpire($app, $bill);
             YxDb::insert('app_install', [
                 'app_id'       => (int)$app['id'],
                 'app_key'      => $app['key'],
                 'customer_id'  => $customerId,
                 'domain'       => 'resource',
                 'license_key'  => '',
+                'edition'      => $edition,
+                'bill_type'    => $bill,
+                'price'        => $price !== null ? round_money(max(0, $price)) : 0,
                 'order_id'     => $orderId,
                 'status'       => 'enabled',
                 'expire_at'    => $expire,
@@ -1450,7 +1530,13 @@ class YxBusiness
             ]);
             YxDb::exec('UPDATE ' . YxDb::table('app') . ' SET sales = sales + 1 WHERE id = ?', [(int)$app['id']]);
         }
-        return ['ok' => true, 'msg' => '已获取', 'expire_at' => $expire];
+        return ['ok' => true, 'msg' => '已获取', 'expire_at' => $expire, 'edition' => $edition, 'bill_type' => $bill];
+    }
+
+    /** 同一域名多次购买时保留更高档位，避免升级后被低价订单覆盖回退 */
+    private static function higherEdition(string $a, string $b): string
+    {
+        return YxEdition::rank($a) >= YxEdition::rank($b) ? (isset(YxEdition::EDITIONS[$a]) ? $a : $b) : $b;
     }
 
     public static function installApp(array $data): array
@@ -1463,6 +1549,11 @@ class YxBusiness
         if ($domain === '') {
             $domain = 'local-' . ($data['customer_id'] ?? 0) . '.local';
         }
+        $edition = self::appEdition($app, isset($data['edition']) ? (string)$data['edition'] : null);
+        $bill    = self::appBillFor($app, $edition, isset($data['bill_type']) ? (string)$data['bill_type'] : null);
+        $price   = array_key_exists('price', $data) && $data['price'] !== null
+            ? round_money(max(0, (float)$data['price']))
+            : null;
 
         // 归属必须带上客户：只按域名匹配会把别人名下的授权记录「接管」过来，
         // 付款方在自己的「我的授权」里反而看不到任何记录。
@@ -1474,24 +1565,33 @@ class YxBusiness
         if ($exists) {
             // 同一域名再次购买（或权益过期后重新购买）：重新启用并顺延到期日，
             // 否则付费续期后到期日仍停在过去，客户付款却拿不到可用授权。
-            $expire = self::appExpireAfter($app, $exists['expire_at'] ?? null);
-            YxDb::update('app_install', [
+            $expire = self::appExpireAfter($app, $exists['expire_at'] ?? null, $bill);
+            $row = [
                 'app_key'     => $app['key'],
                 'license_key' => $licenseKey,
                 'order_id'    => (int)($data['order_id'] ?? 0) > 0 ? (int)$data['order_id'] : (int)$exists['order_id'],
                 'status'      => 'enabled',
                 'expire_at'   => $expire,
-            ], 'id = :id', ['id' => (int)$exists['id']]);
-            return ['ok' => true, 'msg' => '该域名已安装，授权已更新至 ' . $expire, 'license_key' => $licenseKey, 'expire_at' => $expire];
+                'edition'     => self::higherEdition((string)($exists['edition'] ?? 'basic'), $edition),
+                'bill_type'   => $bill,
+            ];
+            if ($price !== null) {
+                $row['price'] = $price;
+            }
+            YxDb::update('app_install', $row, 'id = :id', ['id' => (int)$exists['id']]);
+            return ['ok' => true, 'msg' => '该域名已安装，授权已更新至 ' . $expire, 'license_key' => $licenseKey, 'expire_at' => $expire, 'edition' => $row['edition'], 'bill_type' => $bill];
         }
 
-        $expire = self::appExpire($app);
+        $expire = self::appExpire($app, $bill);
         YxDb::insert('app_install', [
             'app_id'       => (int)$app['id'],
             'app_key'      => $app['key'],
             'customer_id'  => (int)($data['customer_id'] ?? 0),
             'domain'       => $domain,
             'license_key'  => $licenseKey,
+            'edition'      => $edition,
+            'bill_type'    => $bill,
+            'price'        => $price !== null ? $price : 0,
             'order_id'     => (int)($data['order_id'] ?? 0),
             'status'       => 'enabled',
             'expire_at'    => $expire,
@@ -1500,21 +1600,32 @@ class YxBusiness
 
         YxDb::exec('UPDATE ' . YxDb::table('app') . ' SET sales = sales + 1, downloads = downloads + 1 WHERE id = ?', [(int)$app['id']]);
 
-        return ['ok' => true, 'msg' => '应用安装成功', 'license_key' => $licenseKey, 'expire_at' => $expire];
+        return ['ok' => true, 'msg' => '应用安装成功', 'license_key' => $licenseKey, 'expire_at' => $expire, 'edition' => $edition, 'bill_type' => $bill];
     }
 
     /* ------------------------------ 工单 ------------------------------ */
 
     public static function createTicket(array $data): int
     {
+        $subject  = (string)($data['subject'] ?? '无标题');
+        $priority = (string)($data['priority'] ?? 'normal');
+
+        // 报案 / 涉警类诉求不进入自助流转：标记「仅人工办理」并提升优先级，由客服人工核对后导办
+        $dispute = YxDispute::inspect($subject, (string)($data['content'] ?? ''));
+        if ($dispute['hit']) {
+            $priority = 'urgent';
+        }
+
         return YxDb::insert('ticket', [
             'sn'          => make_sn('TK', 'ticket'),
             'customer_id' => (int)($data['customer_id'] ?? 0),
             'service_id'  => (int)($data['service_id'] ?? 0),
             'department'  => $data['department'] ?? 'tech',
-            'subject'     => $data['subject'] ?? '无标题',
-            'priority'    => $data['priority'] ?? 'normal',
+            'subject'     => $subject,
+            'priority'    => $priority,
             'status'      => 'open',
+            'manual_only' => $dispute['hit'] ? 1 : 0,
+            'manual_note' => $dispute['hit'] ? mb_substr('命中：' . implode('、', $dispute['keywords']), 0, 255) : null,
             'created_at'  => now(),
             'updated_at'  => now(),
         ]);
@@ -1540,6 +1651,16 @@ class YxBusiness
             'UPDATE ' . YxDb::table('ticket') . ' SET reply_count = reply_count + 1, status = ?, admin_id = ?, updated_at = ? WHERE id = ?',
             [$authorType === 'admin' ? 'replied' : 'open', $authorType === 'admin' ? $authorId : 0, now(), $ticketId]
         );
+        // 客户后续补充若转为报案类诉求，同步标记为「仅人工办理」，避免继续按普通工单自助答复
+        if ($authorType !== 'admin' && empty($ticket['manual_only'])) {
+            $dispute = YxDispute::inspect($content);
+            if ($dispute['hit']) {
+                YxDb::exec(
+                    'UPDATE ' . YxDb::table('ticket') . ' SET manual_only = 1, manual_note = ?, priority = ?, updated_at = ? WHERE id = ?',
+                    [mb_substr('命中：' . implode('、', $dispute['keywords']), 0, 255), 'urgent', now(), $ticketId]
+                );
+            }
+        }
         return ['ok' => true, 'msg' => '回复成功'];
     }
 

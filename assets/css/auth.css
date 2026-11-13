@@ -413,35 +413,73 @@ body.yx-auth-body {
   transform: translateY(1px);
 }
 
-/* 条款勾选 */
+/* 条款勾选：服务条款与隐私政策同意项
+   与上方表单字段左对齐：复选框走 grid 第一列、文案独占第二列且不参与换行错位，
+   文字统一 1.7 行高，勾选框与首行文字中线对齐，不会随文案行数上下偏移。 */
 .yx-auth-legal {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 18px 0 0;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 8px;
+  margin: 20px 0 0;
   font-size: 12.5px;
   line-height: 1.7;
   color: var(--muted);
+  cursor: pointer;
 }
 
 .yx-auth-legal input {
-  margin: 3px 0 0;
+  /* 与首行文字的中线对齐：行高 1.7 × 12.5px ≈ 21.25px，(21.25 - 16) / 2 ≈ 2.6px */
+  margin: 2.6px 0 0;
+  width: 16px;
+  height: 16px;
   flex: 0 0 auto;
   accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.yx-auth-legal-txt {
+  display: block;
+  min-width: 0;
+  /* 中文按字断行，避免长链接把「隐私政策」挤到下一行中间 */
+  word-break: break-word;
 }
 
 .yx-auth-legal a {
   color: var(--primary);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .yx-auth-legal a:hover {
   text-decoration: underline;
 }
 
-/* 切换到另一页 */
+/* 生效日期：整体不拆行，避免「年 / 月 / 日」被拆到两行 */
+.yx-auth-legal-date {
+  white-space: nowrap;
+  color: #94a3b8;
+}
+
+.yx-auth-legal input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* 登录页的同意声明：没有勾选框，只有文案，因此退化为普通块级行 */
+.yx-auth-legal--static {
+  display: block;
+  cursor: default;
+}
+
+/* 主提交按钮紧跟在同意声明 / 勾选行下方，缩短默认间距 */
+.yx-auth-legal + .yx-auth-submit {
+  margin-top: 14px;
+}
+
+/* 切换到另一页：注册页已并入 .yx-auth-foot，登录页用于「手机注册 / 邮箱注册」两个入口 */
 .yx-auth-switch {
-  margin: 26px 0 0;
+  margin: 20px 0 0;
   text-align: center;
   font-size: 13.5px;
   color: var(--muted);
@@ -457,61 +495,70 @@ body.yx-auth-body {
   text-decoration: underline;
 }
 
-/* 登录 / 注册方式切换：蓝色功能框 + 白色字体，当前方式高亮 */
+/* 两个注册入口之间的分隔点 */
+.yx-auth-switch-sep {
+  margin: 0 8px;
+  color: #cbd5e1;
+}
+
+/* 登录 / 注册方式切换：位于表单顶部，两个入口固定左右并排、等宽
+   只承担「切换方式」（<a>），真正的提交按钮是条款下方的 .yx-auth-submit，
+   因此这里采用浅色胶囊样式，避免与主按钮抢占视觉重心。 */
 .yx-auth-modes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin: 16px 0 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 4px;
 }
 
 .yx-auth-mode {
-  flex: 1 1 0;
-  min-width: 120px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 44px;
-  padding: 0 18px;
-  border: 1px solid var(--primary);
+  height: 42px;
+  min-width: 0;
+  padding: 0 12px;
+  border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--primary);
-  color: #fff;
+  background: #fff;
+  color: var(--ink-2);
+  font-family: inherit;
   font-size: 14px;
   font-weight: 600;
+  line-height: 1;
   text-align: center;
   text-decoration: none;
   box-sizing: border-box;
-  transition: background .16s ease, border-color .16s ease, box-shadow .16s ease;
+  transition: border-color .16s ease, color .16s ease, background .16s ease;
 }
 
 .yx-auth-mode:hover {
-  background: var(--primary-d);
-  border-color: var(--primary-d);
-  color: #fff;
+  border-color: var(--primary);
+  color: var(--primary);
+  background: #fff;
   text-decoration: none;
 }
 
-/* 当前所在方式：加深底色并加环，避免与普通功能框混淆 */
+/* 当前方式：主色描边 + 浅底，表示正在使用的方式，点击另一个即切换 */
 .yx-auth-mode.is-active {
-  background: var(--primary-d);
-  border-color: var(--primary-d);
-  box-shadow: 0 0 0 2px var(--primary-soft);
-  cursor: default;
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
 }
 
 .yx-auth-mode.is-active:hover {
-  background: var(--primary-d);
-  border-color: var(--primary-d);
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
 }
 
-/* 底部辅助链接 */
+/* 底部辅助链接：紧跟在两个方式入口下方，与按钮框之间留出分隔线 */
 .yx-auth-foot {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  margin: 22px 0 0;
-  padding-top: 18px;
+  margin: 18px 0 0;
+  padding-top: 16px;
   border-top: 1px solid var(--line);
   font-size: 12.5px;
   color: var(--muted);
@@ -533,58 +580,6 @@ body.yx-auth-body {
   border-radius: 10px;
   font-size: 13px;
   line-height: 1.65;
-}
-
-/* --------------------------- LOGO 墙（认证页底部） --------------------------- */
-
-.yx-auth-wall {
-  margin: 26px 0 0;
-  padding-top: 18px;
-  border-top: 1px solid var(--line);
-  text-align: center;
-}
-
-.yx-auth-wall-title {
-  margin: 0 0 12px;
-  font-size: 12px;
-  letter-spacing: .06em;
-  color: var(--muted);
-}
-
-.yx-auth-wall-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-}
-
-.yx-auth-wall-list li {
-  flex: 0 0 auto;
-  width: 84px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
-}
-
-.yx-auth-wall-list img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  opacity: .78;
-  transition: opacity .16s ease;
-}
-
-.yx-auth-wall-list li:hover img {
-  opacity: 1;
 }
 
 /* -------------------------------- 响应式 -------------------------------- */
@@ -628,8 +623,14 @@ body.yx-auth-body {
     width: 100%;
   }
 
+  /* 窄屏仍保持左右并排，仅压缩字号与内边距，避免两个入口纵向堆叠 */
+  .yx-auth-modes {
+    gap: 10px;
+  }
+
   .yx-auth-mode {
-    flex: 1 1 100%;
+    padding: 0 8px;
+    font-size: 13.5px;
   }
 
   .yx-auth-foot {

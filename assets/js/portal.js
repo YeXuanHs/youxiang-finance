@@ -160,9 +160,9 @@
         document.querySelectorAll('.zd-nav a').forEach(function (a) {
             a.addEventListener('click', function () { setNav(false); });
         });
-        // 视口变宽回桌面时复位
+        // 视口变宽回桌面时复位（与 CSS 抽屉断点 1200 保持一致）
         window.addEventListener('resize', function () {
-            if (window.innerWidth > 860 && document.body.classList.contains('zd-nav-open')) { setNav(false); }
+            if (window.innerWidth > 1200 && document.body.classList.contains('zd-nav-open')) { setNav(false); }
         });
     }
 

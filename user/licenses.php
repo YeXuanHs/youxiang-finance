@@ -57,14 +57,39 @@ $installs = YxDb::all(
 
 $siteBadge = YxLicense::badge();
 
-// 官方正版程序包：程序包本体免费下载（登录即可），授权包（安装授权码）在商店另行按次购买
-$pkg = YxDb::one(
-    "SELECT * FROM " . YxDb::table('app') . " WHERE author_type = 'official' AND type = 'package' AND status = 'on' AND key NOT LIKE '%open%' ORDER BY id DESC LIMIT 1"
+/*
+ * 官方主程序包三个 SKU，权益与价格各自独立：
+ *   program 正版程序包：88 元/次，购买下载权益后方可下载，不含安装授权码
+ *   license 安装授权包：授权文件 + 按域名签发的安装授权码
+ *   open    开源版：登录即可免费下载，不需要授权码
+ */
+$pkgs = YxDb::all(
+    "SELECT * FROM " . YxDb::table('app') . " WHERE author_type = 'official' AND type = 'package' AND status = 'on' ORDER BY id DESC"
 );
-$openPkg = YxDb::one(
-    "SELECT * FROM " . YxDb::table('app') . " WHERE author_type = 'official' AND type = 'package' AND status = 'on' AND key LIKE '%open%' ORDER BY id DESC LIMIT 1"
-);
-$pkgEnt = $pkg ? YxBusiness::entitlement((int)$pkg['id'], $cid) : null;
+$pkgByKind = ['program' => null, 'license' => null, 'open' => null];
+foreach ($pkgs as $p) {
+    $k = YxStore::packageKind($p);
+    if ($k !== '' && !$pkgByKind[$k]) {
+        $pkgByKind[$k] = $p;
+    }
+}
+$programPkg = $pkgByKind['program'];
+$licensePkg = $pkgByKind['license'];
+$openPkg    = $pkgByKind['open'];
+$licenseEnt = $licensePkg ? YxBusiness::entitlement((int)$licensePkg['id'], $cid) : null;
+/* 正版程序包下载权益：与下载入口同一口径（权益或已支付订单） */
+$programBought = $programPkg ? YxStore::hasPurchased($programPkg, $cid) : false;
+$pkgPriceTxt = static function (?array $p): string {
+    if (!$p) {
+        return '';
+    }
+    /* 仅开源版免费下载：正版程序包/授权包按标价显示 */
+    if (YxStore::packageFree($p)) {
+        return '免费';
+    }
+    $bill = YxBusiness::billType($p);
+    return money((float)$p['price'], true) . ($bill === 'year' ? '/年' : '/次');
+};
 
 $userTitle  = '我的授权';
 $userActive = 'licenses';
@@ -88,54 +113,94 @@ require dirname(__DIR__) . '/includes/user_header.php';
         </table>
     </div>
 
-    <?php if ($pkg || $openPkg): ?>
-    <?php $pkgCard = $pkg ?: $openPkg; ?>
+    <?php if ($programPkg || $licensePkg || $openPkg): ?>
     <div class="card">
-        <h2>程序包下载</h2>
-        <p class="muted small">程序包免费下载，登录即可获取；安装正版发行包时需要的授权码属「授权包」，按次（按域名）单独购买。解压到站点根目录后访问 <code>/install/install.php</code> 完成安装。</p>
-        <table class="data kv">
-            <tr><th>程序包</th><td><?= e($pkgCard['name']) ?></td></tr>
-            <tr><th>版本</th><td><?= e($pkgCard['version'] ?: '-') ?></td></tr>
-            <tr><th>运行环境</th><td><?= e($pkgCard['compatible'] ?: 'PHP 7.4 - 8.2') ?></td></tr>
-            <tr><th>包大小</th><td><?= e(number_format(((int)$pkgCard['package_size']) / 1048576, 2)) ?> MB</td></tr>
-            <tr><th>程序包价格</th><td>免费</td></tr>
-            <tr><th>授权包价格</th><td><?= e($pkg ? money((float)$pkg['price'], true) . (YxBusiness::billType($pkg) === 'year' ? '/年' : '/次') . '（按域名签发授权码）' : '不适用（开源版无需授权码）') ?></td></tr>
-        </table>
-        <?php if ($pkg): ?>
-            <a class="btn btn-primary btn-block mt-3" href="<?= e(url('api/store_download.php?id=' . (int)$pkg['id'])) ?>">免费下载正版程序包（tar.gz）</a>
-            <?php if ($pkgEnt && (string)($pkgEnt['license_key'] ?? '') !== ''): ?>
-                <div class="alert alert-ok mt-3">
-                    <strong>安装授权码（与绑定域名 <?= e($pkgEnt['domain']) ?> 一一对应）</strong>
-                    <p class="mono" style="font-size:18px;letter-spacing:1px;margin:8px 0"><?= e($pkgEnt['license_key']) ?></p>
-                    <p class="muted small" style="margin:0">安装时访问 <code>/install/install.php</code>，在「创始人信息与授权码」步骤填入该码；正版发行包强校验授权码，缺失或不匹配将无法完成安装。</p>
-                </div>
-                <p class="muted small mt-2">已购买的授权包有效期内可重复使用；程序包可随时免费重新下载。</p>
-                <?php
-                $certRow = YxDb::one(
-                    'SELECT id, sn FROM ' . YxDb::table('certificate') . ' WHERE customer_id = ? AND domain = ? AND product = ? ORDER BY id DESC LIMIT 1',
-                    [$cid, (string)$pkgEnt['domain'], 'official']
-                );
-                ?>
-                <?php if ($certRow): ?>
-                    <a class="btn btn-ghost btn-block mt-2" href="<?= e(url('user/certificate.php?id=' . (int)$certRow['id'])) ?>">查看正版购买证明（<?= e($certRow['sn']) ?> · 加盖电子公章）</a>
-                <?php endif; ?>
-            <?php else: ?>
-                <?php
-                // 与上面「授权包价格」同一口径：金额 + 单位，避免「¥366.00 一次性 / 次」重复
-                $pkgPriceTxt = money((float)$pkg['price'], true) . (YxBusiness::billType($pkg) === 'year' ? '/年' : '/次');
-                ?>
-                <div class="alert alert-warn mt-3">
-                    程序包可免费下载安装；未购买授权包时，正版发行包会以「未授权」状态运行，安装向导要求填写授权码时需先购买授权包（<?= e($pkgPriceTxt) ?>）。
-                </div>
-                <a class="btn btn-block" href="<?= e(url('store/detail.php?id=' . (int)$pkg['id'])) ?>">单独购买授权包 · <?= e($pkgPriceTxt) ?></a>
+        <h2>程序包与授权包</h2>
+        <p class="muted small">程序包与授权包是<b>两件独立商品</b>，价格与权益各自计算：程序包只含程序本体，授权包含授权文件与按域名签发的安装授权码，购买其一不等于获得另一项。发行格式：正版程序包与开源包为<b>明文 zip</b>（<code>.zip</code>，无解压密码），安装授权包为<b>整包密文</b>（<code>.zip.enc</code>，解密密钥随购买凭证由本站客服发放）。解压/解包后覆盖到站点根目录，访问 <code>/install/install.php</code> 完成安装；授权包购买成功后系统按结账域名<b>自动签发</b>安装授权码，可在本页下方查看。包内普通文件可自由修改，仅授权核心文件（<code>includes/license.php</code>、<code>includes/license/*.php</code>、<code>includes/pkgsecret.php</code>、<code>install/install.php</code>）保持只读。</p>
+        <div class="table-wrap"><table class="data mobile-cards">
+            <thead><tr><th>商品</th><th>价格</th><th>包大小</th><th>我的状态</th><th>操作</th></tr></thead>
+            <tbody>
+            <?php if ($programPkg): ?>
+                <tr>
+                    <td data-label="商品">正版程序包<br><span class="muted small">v<?= e($programPkg['version'] ?: '-') ?> · 程序本体 + 官方授权模块，不含授权码</span></td>
+                    <td data-label="价格"><?= e($pkgPriceTxt($programPkg)) ?></td>
+                    <td data-label="包大小"><?= e(number_format(((int)$programPkg['package_size']) / 1048576, 2)) ?> MB</td>
+                    <td data-label="我的状态"><?= $programBought ? '<span class="badge badge-ok">已购买</span>' : '<span class="badge badge-mute">未购买</span>' ?></td>
+                    <td data-label="操作">
+                        <?php if ($programBought): ?>
+                            <?php if (YxStore::packageReady($programPkg)): ?>
+                                <a class="btn btn-primary btn-sm" href="<?= e(url('api/store_download.php?id=' . (int)$programPkg['id'])) ?>">下载正版程序包</a>
+                            <?php else: ?>
+                                <span class="muted small">发行文件待上传</span>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <a class="btn btn-sm" href="<?= e(url('store/detail.php?id=' . (int)$programPkg['id'])) ?>">购买正版程序包</a>
+                        <?php endif; ?>
+                    </td>
+                </tr>
             <?php endif; ?>
-        <?php endif; ?>
-        <?php if ($openPkg): ?>
-            <a class="btn btn-block mt-2" href="<?= e(url('api/store_download.php?id=' . (int)$openPkg['id'])) ?>">下载开源版程序包（tar.gz）</a>
-            <div class="alert alert-warn mt-2">
-                <strong>开源版安装后不可切换正式版。</strong>
-                开源版与正版为同一份代码，但开源发行包把授权模式固定为开源版：授权模块不启用，界面显示「开源版 · 未启用授权模块」，
-                后台不提供切换正式版的入口。需要按域名校验授权，请下载并安装正版程序包。
+            <?php if ($licensePkg): ?>
+                <tr>
+                    <td data-label="商品">安装授权包<br><span class="muted small">v<?= e($licensePkg['version'] ?: '-') ?> · 授权文件 + 按域名签发的安装授权码</span></td>
+                    <td data-label="价格"><?= e($pkgPriceTxt($licensePkg)) ?></td>
+                    <td data-label="包大小"><?= e(number_format(((int)$licensePkg['package_size']) / 1048576, 2)) ?> MB</td>
+                    <td data-label="我的状态"><?= $licenseEnt ? '<span class="badge badge-ok">已购买</span>' : '<span class="badge badge-mute">未购买</span>' ?></td>
+                    <td data-label="操作">
+                        <?php if ($licenseEnt): ?>
+                            <?php if (YxStore::packageReady($licensePkg)): ?>
+                                <a class="btn btn-primary btn-sm" href="<?= e(url('api/store_download.php?id=' . (int)$licensePkg['id'])) ?>">下载授权包</a>
+                            <?php else: ?>
+                                <span class="muted small">发行文件待上传</span>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <a class="btn btn-sm" href="<?= e(url('store/detail.php?id=' . (int)$licensePkg['id'])) ?>">单独购买授权包</a>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endif; ?>
+            <?php if ($openPkg): ?>
+                <tr>
+                    <td data-label="商品">开源版<br><span class="muted small">v<?= e($openPkg['version'] ?: '-') ?> · 授权模块不启用，安装后不能切换为正版</span></td>
+                    <td data-label="价格">免费</td>
+                    <td data-label="包大小"><?= e(number_format(((int)$openPkg['package_size']) / 1048576, 2)) ?> MB</td>
+                    <td data-label="我的状态"><span class="badge badge-info">免费下载</span></td>
+                    <td data-label="操作">
+                        <?php if (YxStore::packageReady($openPkg)): ?>
+                            <a class="btn btn-sm" href="<?= e(url('api/store_download.php?id=' . (int)$openPkg['id'])) ?>">下载开源版</a>
+                        <?php else: ?>
+                            <span class="muted small">发行文件待上传</span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endif; ?>
+            <tr>
+                <td data-label="商品">发行包<br><span class="muted small">按项目定制分发，授权逻辑同正版</span></td>
+                <td data-label="价格">不公开</td>
+                <td data-label="包大小">-</td>
+                <td data-label="我的状态"><span class="badge badge-mute">未开通</span></td>
+                <td data-label="操作"><a class="btn btn-sm btn-ghost" href="<?= e(url('user/tickets.php')) ?>">联系客服开通</a></td>
+            </tr>
+            </tbody>
+        </table></div>
+        <?php if ($licenseEnt && (string)($licenseEnt['license_key'] ?? '') !== ''): ?>
+            <div class="alert alert-ok mt-3" id="license-code">
+                <strong>安装授权码（与绑定域名 <?= e($licenseEnt['domain']) ?> 一一对应）</strong>
+                <p class="mono" style="font-size:18px;letter-spacing:1px;margin:8px 0"><?= e($licenseEnt['license_key']) ?></p>
+                <p class="muted small" style="margin:0">安装时访问 <code>/install/install.php</code>，在「创始人信息与授权码」步骤填入该码；正版发行包强校验授权码，缺失或不匹配将无法完成安装。</p>
+            </div>
+            <?php
+            $certRow = YxDb::one(
+                'SELECT id, sn FROM ' . YxDb::table('certificate') . ' WHERE customer_id = ? AND domain = ? AND product = ? ORDER BY id DESC LIMIT 1',
+                [$cid, (string)$licenseEnt['domain'], 'official']
+            );
+            ?>
+            <?php if ($certRow): ?>
+                <a class="btn btn-ghost btn-block mt-2" href="<?= e(url('user/certificate.php?id=' . (int)$certRow['id'])) ?>">查看正版购买证明（<?= e($certRow['sn']) ?> · 加盖电子公章）</a>
+            <?php endif; ?>
+            <p class="muted small mt-2">授权包有效期内可重复使用；更换绑定域名会重新签发授权码，旧码随即失效。</p>
+        <?php elseif ($licensePkg): ?>
+            <div class="alert alert-warn mt-3">
+                未购买安装授权包时，正版发行包会以「未授权」状态运行；安装向导要求填写授权码时需先购买授权包（<?= e($pkgPriceTxt($licensePkg)) ?>，按域名签发，一次购买对应一个域名）。
             </div>
         <?php endif; ?>
     </div>
@@ -170,7 +235,7 @@ require dirname(__DIR__) . '/includes/user_header.php';
     <h2>我的应用授权（<?= count($installs) ?> 个）</h2>
     <p class="muted small">授权码与绑定域名一一对应；更换域名后会重新签发，旧授权码随即失效。</p>
     <?php if (!$installs): ?>
-        <div class="empty">还没有安装应用，<a href="<?= e(url('store/index.php')) ?>">去应用商店看看</a></div>
+        <div class="empty">还没有安装应用。</div>
     <?php else: ?>
     <div class="table-wrap"><table class="data mobile-cards">
         <thead><tr><th>应用</th><th>版本</th><th>绑定域名</th><th>授权码</th><th>到期</th><th>状态</th><th>更新绑定域名</th></tr></thead>
@@ -185,7 +250,7 @@ require dirname(__DIR__) . '/includes/user_header.php';
                 <td data-label="版本"><?= e($i['version'] ?: '-') ?></td>
                 <td data-label="绑定域名" class="mono small"><?= e($i['domain']) ?></td>
                 <td data-label="授权码" class="mono small"><?= e($iValid ? $i['license_key'] : YxBusiness::maskLicenseKey((string)$i['license_key'])) ?></td>
-                <td data-label="到期"><?= e($i['expire_at'] ?: '永久') ?></td>
+                <td data-label="到期"><?= e($i['expire_at'] ?: '-') ?></td>
                 <td data-label="状态"><?= $i['status'] === 'enabled' ? '<span class="badge badge-ok">已启用</span>' : '<span class="badge badge-mute">已停用</span>' ?></td>
                 <td data-label="更新绑定域名">
                     <form method="post" class="inline-form">

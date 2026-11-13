@@ -7,8 +7,8 @@ return [
     'app' => [
         'name' => '优享财务系统',
         'sub_name' => '业务与财务一体化管理平台',
-        'version'  => '1.6.2',
-        'build'    => '20261103',
+        'version'  => '1.6.4',
+        'build'    => '20261111',
         'debug' => false,
         'timezone' => 'Asia/Shanghai',
         'key' => '',
@@ -32,7 +32,8 @@ return [
     ],
     'license' => [
         'mode' => 'official',
-        'official_api' => 'https://license.youxiang.local',
+        'lock_mode' => false,
+        'official_api' => '',
         'query_path' => '/api/license.php',
         'cache_ttl' => 21600,
         'offline_ok' => true,
@@ -41,6 +42,10 @@ return [
     'store' => [
         'remote_api' => '',
         'commission' => 20,
+        /* 发行包受控分发目录：必须位于站点根目录之外，且仅 root 可写。
+           授权管理员通过 后台 → 商店管理 → 发行包分发 读取，前台不提供任何直链。 */
+        'release_dir' => '',
+        'key_dir'     => '',
     ],
     'security' => [
         'admin_login_limit' => 5,

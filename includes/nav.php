@@ -42,6 +42,8 @@ function yx_admin_menu(): array
         ['key' => 'marketing',  'label' => '商品图制作', 'icon' => '🖼', 'url' => 'admin/marketing.php', 'feature' => null],
         ['key' => 'developers', 'label' => '开发者中心', 'icon' => '◆', 'url' => 'admin/developers.php', 'feature' => null, 'perm' => 'developer'],
         ['key' => 'infringe',   'label' => '版权侵权', 'icon' => '⚠', 'url' => 'admin/infringe.php', 'feature' => null],
+        ['key' => 'legal_letter', 'label' => '律师函', 'icon' => '✉', 'url' => 'admin/legal_letter.php', 'feature' => null],
+        ['key' => 'legal_review', 'label' => '法务复核', 'icon' => '✓', 'url' => 'admin/legal_review.php', 'feature' => null],
         ['key' => 'api_apps',   'label' => '下游接口', 'icon' => '⇄', 'url' => 'admin/api_apps.php', 'feature' => 'openapi'],
         ['key' => 'zjmf',       'label' => '接口对接', 'icon' => '⤯', 'url' => 'admin/zjmf.php', 'feature' => 'openapi'],
         ['key' => 'licenses', 'label' => '授权中心', 'icon' => '🔑', 'url' => 'admin/licenses.php', 'feature' => null],
@@ -50,6 +52,8 @@ function yx_admin_menu(): array
         ['key' => 'banners',  'label' => '首页横幅', 'icon' => '▭', 'url' => 'admin/banners.php', 'feature' => null],
         ['key' => 'ads',      'label' => '展示广告位', 'icon' => '◫', 'url' => 'admin/ads.php', 'feature' => null],
         ['key' => 'about',    'label' => '关于我们', 'icon' => 'ⓘ', 'url' => 'admin/about.php', 'feature' => null],
+        ['key' => 'partners', 'label' => '合作伙伴', 'icon' => '◎', 'url' => 'admin/partners.php', 'feature' => null],
+        ['key' => 'legal',    'label' => '法律文档', 'icon' => '§', 'url' => 'admin/legal.php', 'feature' => null],
         ['key' => 'vuln',     'label' => '漏洞审核', 'icon' => '🛡', 'url' => 'admin/vuln.php', 'feature' => null],
         ['key' => 'logs',     'label' => '操作日志', 'icon' => '≡', 'url' => 'admin/logs.php', 'feature' => null],
         ['key' => 'admins',   'label' => '管理员管理', 'icon' => '👥', 'url' => 'admin/admins.php', 'feature' => null, 'perm' => 'admin_users'],
@@ -102,6 +106,7 @@ function yx_user_nav_spec(): array
         $item('ucenter', 'upstream_markup', '代理等级加价', '⇗', 'user/upstream_markup.php', '加价规则 · 上游检测', 'upstream.markup'),
         $item('ucenter', 'service_orders', '我的服务', '☎', 'user/service_orders.php', '增值服务订单'),
         $item('ucenter', 'recharge', '余额充值', '＋', 'user/recharge.php', '在线充值 · 流水'),
+        $item('ucenter', 'partners', '合作伙伴', '◎', 'user/partners.php', '服务网络 · 合作机构'),
 
         /* ---------------- 我的订单 ----------------
          * 一级入口指向订单列表，不再指向不存在的 user/order.php */
